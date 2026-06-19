@@ -412,6 +412,8 @@ class SimpleCopyLogic:
         modlist = self._organizer.modList()
         all_mods = modlist.allMods()
 
+        self._logger.info(f"Syncing mod tags. Selected mods: {len(self._selected_mods)}")
+
         for mod_name in all_mods:
             mod = modlist.getMod(mod_name)
             if not mod or mod.isSeparator():
@@ -431,8 +433,9 @@ class SimpleCopyLogic:
                     self._logger.debug(f"Added note tag to '{mod_name}'")
             else:
                 if MCH_CATEGORY in current_categories:
-                    mod.removeCategory(MCH_CATEGORY)
-                    self._logger.debug(f"Removed category '{MCH_CATEGORY}' from '{mod_name}'")
+                    result = mod.removeCategory(MCH_CATEGORY)
+                    self._logger.info(f"Removed category '{MCH_CATEGORY}' from '{mod_name}': {result}")
+                    self._logger.debug(f"Categories after removal: {list(mod.categories())}")
 
                 if MCH_NOTE_TAG in current_notes:
                     new_notes = current_notes.replace("\n" + MCH_NOTE_TAG, "").replace(MCH_NOTE_TAG, "").strip()
