@@ -1,4 +1,5 @@
 import mobase
+from pathlib import Path
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QTreeWidget, QTreeWidgetItem,
     QPushButton, QLabel, QLineEdit, QAbstractItemView, QMessageBox,
@@ -9,14 +10,86 @@ from PyQt6.QtGui import QColor, QFont
 
 from .logger import get_logger 
 
-COLUMN_NAME = 0
-COLUMN_PRIORITY = 1
+COLUMN_CHECK = 0
+COLUMN_NAME = 1
+COLUMN_PRIORITY = 2
 
 IS_SEPARATOR_ROLE = Qt.ItemDataRole.UserRole + 1
 MOD_NAME_ROLE = Qt.ItemDataRole.UserRole + 2
 PRIORITY_SORT_ROLE = Qt.ItemDataRole.UserRole + 3
 
-SEPARATOR_COLOR = QColor(100, 149, 237)
+DEFAULT_SEPARATOR_COLOR = QColor(100, 149, 237)
+
+def _parse_variant_color(color_str: str) -> QColor | None:
+    if color_str.startswith('"') and color_str.endswith('"'):
+        color_str = color_str[1:-1]
+    
+    if not color_str.startswith("@Variant("):
+        return None
+    
+    raw = color_str[9:]
+    if raw.endswith(")"):
+        raw = raw[:-1]
+    
+    result = bytearray()
+    i = 0
+    while i < len(raw):
+        if raw[i] == '\\' and i + 1 < len(raw):
+            next_char = raw[i + 1]
+            if next_char == '0':
+                result.append(0)
+                i += 2
+            elif next_char == 'x':
+                hex_digits = ""
+                j = i + 2
+                while j < len(raw) and j < i + 4 and raw[j] in '0123456789abcdefABCDEF':
+                    hex_digits += raw[j]
+                    j += 1
+                if hex_digits:
+                    result.append(int(hex_digits, 16))
+                    i = j
+                else:
+                    result.append(ord('x'))
+                    i += 2
+            else:
+                result.append(ord(next_char))
+                i += 2
+        else:
+            result.append(ord(raw[i]))
+            i += 1
+    
+    raw_bytes = bytes(result)
+    
+    if len(raw_bytes) < 13:
+        return None
+    
+    if raw_bytes[0:4] != b'\x00\x00\x00\x43':
+        return None
+    
+    r = raw_bytes[7]
+    g = raw_bytes[9]
+    b = raw_bytes[11]
+    
+    return QColor(r, g, b)
+
+def _get_separator_color(mod_path: str) -> QColor:
+    meta_path = Path(mod_path) / "meta.ini"
+    if not meta_path.exists():
+        return DEFAULT_SEPARATOR_COLOR
+    
+    try:
+        with open(meta_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith('color='):
+                    color_str = line[6:]
+                    color = _parse_variant_color(color_str)
+                    if color and color.isValid():
+                        return color
+    except Exception:
+        pass
+    
+    return DEFAULT_SEPARATOR_COLOR
 
 class ModTreeWidgetItem(QTreeWidgetItem):
     def __lt__(self, other):
@@ -46,10 +119,10 @@ class SimpleCopySettingsDialog(QDialog):
         self._mod_tree_widget.header().setSortIndicatorShown(True)
         self._mod_tree_widget.header().setSectionsClickable(True)
         self._mod_tree_widget.header().setStretchLastSection(False)
-        self._mod_tree_widget.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
-        self._mod_tree_widget.header().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-        self._mod_tree_widget.header().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        self._mod_tree_widget.header().resizeSection(0, 30)
+        self._mod_tree_widget.header().setSectionResizeMode(COLUMN_CHECK, QHeaderView.ResizeMode.Fixed)
+        self._mod_tree_widget.header().setSectionResizeMode(COLUMN_NAME, QHeaderView.ResizeMode.Stretch)
+        self._mod_tree_widget.header().setSectionResizeMode(COLUMN_PRIORITY, QHeaderView.ResizeMode.ResizeToContents)
+        self._mod_tree_widget.header().resizeSection(COLUMN_CHECK, 30)
         self._mod_tree_widget.itemChanged.connect(self._on_item_changed)
         
         self._filter_input = QLineEdit()
@@ -98,49 +171,51 @@ class SimpleCopySettingsDialog(QDialog):
             priority = all_mods_manager.priority(mod_name)
 
             item = ModTreeWidgetItem()
-            item.setText(1, mod_name)
-            item.setText(2, str(priority))
-            item.setData(1, MOD_NAME_ROLE, mod_name)
-            item.setData(2, PRIORITY_SORT_ROLE, priority)
-            item.setTextAlignment(2, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            item.setText(COLUMN_NAME, mod_name)
+            item.setText(COLUMN_PRIORITY, str(priority))
+            item.setData(COLUMN_NAME, MOD_NAME_ROLE, mod_name)
+            item.setData(COLUMN_PRIORITY, PRIORITY_SORT_ROLE, priority)
+            item.setTextAlignment(COLUMN_PRIORITY, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
             if is_separator:
-                item.setData(0, IS_SEPARATOR_ROLE, True)
+                item.setData(COLUMN_CHECK, IS_SEPARATOR_ROLE, True)
                 item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsUserCheckable & ~Qt.ItemFlag.ItemIsSelectable)
-                item.setForeground(1, SEPARATOR_COLOR)
-                item.setForeground(2, SEPARATOR_COLOR)
-                font = item.font(1)
+                
+                separator_color = _get_separator_color(mod.absolutePath())
+                item.setForeground(COLUMN_NAME, separator_color)
+                item.setForeground(COLUMN_PRIORITY, separator_color)
+                font = item.font(COLUMN_NAME)
                 font.setBold(True)
-                item.setFont(1, font)
-                item.setFont(2, font)
-                item.setTextAlignment(1, Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
-                item.setToolTip(1, f"{mod_name} (Separator)")
+                item.setFont(COLUMN_NAME, font)
+                item.setFont(COLUMN_PRIORITY, font)
+                item.setTextAlignment(COLUMN_NAME, Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
+                item.setToolTip(COLUMN_NAME, f"{mod_name} (Separator)")
             else:
-                item.setData(0, IS_SEPARATOR_ROLE, False)
+                item.setData(COLUMN_CHECK, IS_SEPARATOR_ROLE, False)
                 item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
                 is_mod_active = bool(all_mods_manager.state(mod_name) & mobase.ModState.ACTIVE)
                 if not is_mod_active:
-                    item.setForeground(1, Qt.GlobalColor.gray)
-                    item.setForeground(2, Qt.GlobalColor.gray)
-                    item.setToolTip(1, f"{mod_name} (Disabled in MO2)")
+                    item.setForeground(COLUMN_NAME, Qt.GlobalColor.gray)
+                    item.setForeground(COLUMN_PRIORITY, Qt.GlobalColor.gray)
+                    item.setToolTip(COLUMN_NAME, f"{mod_name} (Disabled in MO2)")
                 else:
-                    item.setToolTip(1, f"{mod_name} (Enabled in MO2)")
+                    item.setToolTip(COLUMN_NAME, f"{mod_name} (Enabled in MO2)")
                 
                 if mod_name in self._current_selected_mods_on_dialog:
-                    item.setCheckState(0, Qt.CheckState.Checked)
+                    item.setCheckState(COLUMN_CHECK, Qt.CheckState.Checked)
                 else:
-                    item.setCheckState(0, Qt.CheckState.Unchecked)
+                    item.setCheckState(COLUMN_CHECK, Qt.CheckState.Unchecked)
 
             self._mod_tree_widget.addTopLevelItem(item)
         
         self._mod_tree_widget.setSortingEnabled(True)
-        self._mod_tree_widget.sortByColumn(2, Qt.SortOrder.AscendingOrder)
+        self._mod_tree_widget.sortByColumn(COLUMN_PRIORITY, Qt.SortOrder.AscendingOrder)
         self._updating_checks = False
 
     def _on_item_changed(self, item, column):
         if self._updating_checks:
             return
-        if column == 0:
+        if column == COLUMN_CHECK:
             self._update_apply_button_state()
 
     def _filter_mods(self):
@@ -150,8 +225,8 @@ class SimpleCopySettingsDialog(QDialog):
         currently_selected_ui = set()
         for i in range(self._mod_tree_widget.topLevelItemCount()):
             item = self._mod_tree_widget.topLevelItem(i)
-            if item.checkState(0) == Qt.CheckState.Checked:
-                mod_name = item.data(1, MOD_NAME_ROLE)
+            if item.checkState(COLUMN_CHECK) == Qt.CheckState.Checked:
+                mod_name = item.data(COLUMN_NAME, MOD_NAME_ROLE)
                 if mod_name:
                     currently_selected_ui.add(mod_name)
         
@@ -161,8 +236,8 @@ class SimpleCopySettingsDialog(QDialog):
         selected_mods = []
         for i in range(self._mod_tree_widget.topLevelItemCount()):
             item = self._mod_tree_widget.topLevelItem(i)
-            if item.checkState(0) == Qt.CheckState.Checked:
-                mod_name = item.data(1, MOD_NAME_ROLE)
+            if item.checkState(COLUMN_CHECK) == Qt.CheckState.Checked:
+                mod_name = item.data(COLUMN_NAME, MOD_NAME_ROLE)
                 if mod_name:
                     selected_mods.append(mod_name)
         return sorted(list(set(selected_mods)), key=str.lower) 
