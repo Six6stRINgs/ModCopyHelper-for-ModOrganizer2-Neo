@@ -5,17 +5,24 @@ from PyQt6.QtWidgets import (
     QHeaderView
 )
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QColor, QFont
 
 from .logger import get_logger 
 
 COLUMN_NAME = 0
 COLUMN_PRIORITY = 1
 
+IS_SEPARATOR_ROLE = Qt.ItemDataRole.UserRole + 1
+MOD_NAME_ROLE = Qt.ItemDataRole.UserRole + 2
+PRIORITY_SORT_ROLE = Qt.ItemDataRole.UserRole + 3
+
+SEPARATOR_COLOR = QColor(100, 149, 237)
+
 class ModTreeWidgetItem(QTreeWidgetItem):
     def __lt__(self, other):
         column = self.treeWidget().sortColumn()
         if column == COLUMN_PRIORITY:
-            return self.data(COLUMN_PRIORITY, Qt.ItemDataRole.UserRole) < other.data(COLUMN_PRIORITY, Qt.ItemDataRole.UserRole)
+            return self.data(COLUMN_PRIORITY, PRIORITY_SORT_ROLE) < other.data(COLUMN_PRIORITY, PRIORITY_SORT_ROLE)
         return super().__lt__(other)
 
 class SimpleCopySettingsDialog(QDialog): 
@@ -25,21 +32,25 @@ class SimpleCopySettingsDialog(QDialog):
         self._logger = get_logger()
         self._initial_selected_mods = set(current_selected_mods)
         self._current_selected_mods_on_dialog = set(current_selected_mods)
+        self._updating_checks = False
 
         self.setWindowTitle(f"{self._logger.name} Settings") 
         self.setMinimumSize(500, 400)
 
         self._mod_tree_widget = QTreeWidget()
-        self._mod_tree_widget.setHeaderLabels(["Mod Name", "Priority"])
-        self._mod_tree_widget.setSelectionMode(QAbstractItemView.SelectionMode.MultiSelection)
+        self._mod_tree_widget.setHeaderLabels(["", "Mod Name", "Priority"])
+        self._mod_tree_widget.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
         self._mod_tree_widget.setRootIsDecorated(False)
         self._mod_tree_widget.setAlternatingRowColors(True)
         self._mod_tree_widget.setSortingEnabled(True)
         self._mod_tree_widget.header().setSortIndicatorShown(True)
         self._mod_tree_widget.header().setSectionsClickable(True)
         self._mod_tree_widget.header().setStretchLastSection(False)
-        self._mod_tree_widget.header().setSectionResizeMode(COLUMN_NAME, QHeaderView.ResizeMode.Stretch)
-        self._mod_tree_widget.header().setSectionResizeMode(COLUMN_PRIORITY, QHeaderView.ResizeMode.ResizeToContents)
+        self._mod_tree_widget.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
+        self._mod_tree_widget.header().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        self._mod_tree_widget.header().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        self._mod_tree_widget.header().resizeSection(0, 30)
+        self._mod_tree_widget.itemChanged.connect(self._on_item_changed)
         
         self._filter_input = QLineEdit()
         self._filter_input.setPlaceholderText("Filter mods by name...")
@@ -68,10 +79,9 @@ class SimpleCopySettingsDialog(QDialog):
         main_layout.addLayout(button_layout)
         
         self.setLayout(main_layout)
-        
-        self._mod_tree_widget.itemSelectionChanged.connect(self._update_apply_button_state)
 
     def _populate_mod_list(self):
+        self._updating_checks = True
         self._mod_tree_widget.setSortingEnabled(False)
         self._mod_tree_widget.clear()
         all_mods_manager = self._organizer.modList()
@@ -84,46 +94,77 @@ class SimpleCopySettingsDialog(QDialog):
             mod = all_mods_manager.getMod(mod_name)
             if not mod: continue
 
+            is_separator = mod.isSeparator()
             priority = all_mods_manager.priority(mod_name)
 
             item = ModTreeWidgetItem()
-            item.setText(COLUMN_NAME, mod_name)
-            item.setText(COLUMN_PRIORITY, str(priority))
-            item.setData(COLUMN_NAME, Qt.ItemDataRole.UserRole, mod_name)
-            item.setData(COLUMN_PRIORITY, Qt.ItemDataRole.UserRole, priority)
-            item.setTextAlignment(COLUMN_PRIORITY, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            item.setText(1, mod_name)
+            item.setText(2, str(priority))
+            item.setData(1, MOD_NAME_ROLE, mod_name)
+            item.setData(2, PRIORITY_SORT_ROLE, priority)
+            item.setTextAlignment(2, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
-            is_mod_active = bool(all_mods_manager.state(mod_name) & mobase.ModState.ACTIVE)
-
-            if not is_mod_active:
-                item.setForeground(COLUMN_NAME, Qt.GlobalColor.gray)
-                item.setForeground(COLUMN_PRIORITY, Qt.GlobalColor.gray)
-                item.setToolTip(COLUMN_NAME, f"{mod_name} (Disabled in MO2)")
+            if is_separator:
+                item.setData(0, IS_SEPARATOR_ROLE, True)
+                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsUserCheckable & ~Qt.ItemFlag.ItemIsSelectable)
+                item.setForeground(1, SEPARATOR_COLOR)
+                item.setForeground(2, SEPARATOR_COLOR)
+                font = item.font(1)
+                font.setBold(True)
+                item.setFont(1, font)
+                item.setFont(2, font)
+                item.setTextAlignment(1, Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
+                item.setToolTip(1, f"{mod_name} (Separator)")
             else:
-                item.setToolTip(COLUMN_NAME, f"{mod_name} (Enabled in MO2)")
-
-            if mod_name in self._current_selected_mods_on_dialog:
-                item.setSelected(True)
+                item.setData(0, IS_SEPARATOR_ROLE, False)
+                item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+                is_mod_active = bool(all_mods_manager.state(mod_name) & mobase.ModState.ACTIVE)
+                if not is_mod_active:
+                    item.setForeground(1, Qt.GlobalColor.gray)
+                    item.setForeground(2, Qt.GlobalColor.gray)
+                    item.setToolTip(1, f"{mod_name} (Disabled in MO2)")
+                else:
+                    item.setToolTip(1, f"{mod_name} (Enabled in MO2)")
+                
+                if mod_name in self._current_selected_mods_on_dialog:
+                    item.setCheckState(0, Qt.CheckState.Checked)
+                else:
+                    item.setCheckState(0, Qt.CheckState.Unchecked)
 
             self._mod_tree_widget.addTopLevelItem(item)
         
         self._mod_tree_widget.setSortingEnabled(True)
-        self._mod_tree_widget.sortByColumn(COLUMN_PRIORITY, Qt.SortOrder.AscendingOrder)
+        self._mod_tree_widget.sortByColumn(2, Qt.SortOrder.AscendingOrder)
+        self._updating_checks = False
+
+    def _on_item_changed(self, item, column):
+        if self._updating_checks:
+            return
+        if column == 0:
+            self._update_apply_button_state()
 
     def _filter_mods(self):
         self._populate_mod_list()
 
     def _update_apply_button_state(self):
         currently_selected_ui = set()
-        for item in self._mod_tree_widget.selectedItems():
-            currently_selected_ui.add(item.data(COLUMN_NAME, Qt.ItemDataRole.UserRole))
+        for i in range(self._mod_tree_widget.topLevelItemCount()):
+            item = self._mod_tree_widget.topLevelItem(i)
+            if item.checkState(0) == Qt.CheckState.Checked:
+                mod_name = item.data(1, MOD_NAME_ROLE)
+                if mod_name:
+                    currently_selected_ui.add(mod_name)
         
         self._apply_button.setEnabled(currently_selected_ui != self._initial_selected_mods)
 
     def get_selected_mods(self) -> list[str]:
         selected_mods = []
-        for item in self._mod_tree_widget.selectedItems():
-            selected_mods.append(item.data(COLUMN_NAME, Qt.ItemDataRole.UserRole))
+        for i in range(self._mod_tree_widget.topLevelItemCount()):
+            item = self._mod_tree_widget.topLevelItem(i)
+            if item.checkState(0) == Qt.CheckState.Checked:
+                mod_name = item.data(1, MOD_NAME_ROLE)
+                if mod_name:
+                    selected_mods.append(mod_name)
         return sorted(list(set(selected_mods)), key=str.lower) 
 
     def _apply_changes(self):
