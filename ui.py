@@ -218,12 +218,21 @@ class SimpleCopySettingsDialog(QDialog):
                     item.setFont(COLUMN_STATUS, self._bold_font())
                     item.setForeground(COLUMN_NAME, CONFLICT_COLOR)
                     item.setToolTip(COLUMN_NAME, f"{mod_name}\n⚠ This mod is enabled in MO2 AND selected in plugin!\nIt will be disabled in MO2 on Apply.")
+                    item.setToolTip(COLUMN_STATUS, "警告：此模组同时在MO2中启用！\n请取消勾选或在MO2中禁用此模组。\nApply后将自动在MO2中禁用。")
                     if is_selected:
                         item.setCheckState(COLUMN_CHECK, Qt.CheckState.Checked)
                     else:
                         item.setCheckState(COLUMN_CHECK, Qt.CheckState.Unchecked)
                 else:
                     item.setData(COLUMN_CHECK, CONFLICT_ROLE, False)
+                    if is_selected:
+                        item.setText(COLUMN_STATUS, "✔")
+                        item.setForeground(COLUMN_STATUS, QColor(50, 180, 50))
+                        item.setToolTip(COLUMN_STATUS, "此模组已选中，将在启动时复制到游戏目录")
+                    else:
+                        item.setText(COLUMN_STATUS, "")
+                        item.setToolTip(COLUMN_STATUS, "")
+                    
                     if not is_mod_active:
                         item.setForeground(COLUMN_NAME, Qt.GlobalColor.gray)
                         item.setForeground(COLUMN_PRIORITY, Qt.GlobalColor.gray)
@@ -274,11 +283,19 @@ class SimpleCopySettingsDialog(QDialog):
             item.setFont(COLUMN_STATUS, self._bold_font())
             item.setForeground(COLUMN_NAME, CONFLICT_COLOR)
             item.setToolTip(COLUMN_NAME, f"{mod_name}\n⚠ This mod is enabled in MO2 AND selected in plugin!\nIt will be disabled in MO2 on Apply.")
+            item.setToolTip(COLUMN_STATUS, "警告：此模组同时在MO2中启用！\n请取消勾选或在MO2中禁用此模组。\nApply后将自动在MO2中禁用。")
         else:
             item.setData(COLUMN_CHECK, CONFLICT_ROLE, False)
-            item.setText(COLUMN_STATUS, "")
-            item.setForeground(COLUMN_STATUS, Qt.GlobalColor.white)
             item.setFont(COLUMN_STATUS, self.font())
+            if is_selected:
+                item.setText(COLUMN_STATUS, "✔")
+                item.setForeground(COLUMN_STATUS, QColor(50, 180, 50))
+                item.setToolTip(COLUMN_STATUS, "此模组已选中，将在启动时复制到游戏目录")
+            else:
+                item.setText(COLUMN_STATUS, "")
+                item.setForeground(COLUMN_STATUS, Qt.GlobalColor.white)
+                item.setToolTip(COLUMN_STATUS, "")
+            
             if is_mod_active:
                 item.setForeground(COLUMN_NAME, Qt.GlobalColor.white)
                 item.setToolTip(COLUMN_NAME, f"{mod_name} (Enabled in MO2)")
