@@ -11,6 +11,13 @@ from .logger import get_logger
 COLUMN_NAME = 0
 COLUMN_PRIORITY = 1
 
+class ModTreeWidgetItem(QTreeWidgetItem):
+    def __lt__(self, other):
+        column = self.treeWidget().sortColumn()
+        if column == COLUMN_PRIORITY:
+            return self.data(COLUMN_PRIORITY, Qt.ItemDataRole.UserRole) < other.data(COLUMN_PRIORITY, Qt.ItemDataRole.UserRole)
+        return super().__lt__(other)
+
 class SimpleCopySettingsDialog(QDialog): 
     def __init__(self, organizer: mobase.IOrganizer, current_selected_mods: list[str], parent=None):
         super().__init__(parent)
@@ -79,26 +86,19 @@ class SimpleCopySettingsDialog(QDialog):
 
             priority = all_mods_manager.priority(mod_name)
 
-            item = QTreeWidgetItem()
+            item = ModTreeWidgetItem()
             item.setText(COLUMN_NAME, mod_name)
             item.setText(COLUMN_PRIORITY, str(priority))
             item.setData(COLUMN_NAME, Qt.ItemDataRole.UserRole, mod_name)
-            item.setData(COLUMN_PRIORITY, Qt.ItemDataRole.DisplayRole, priority)
+            item.setData(COLUMN_PRIORITY, Qt.ItemDataRole.UserRole, priority)
             item.setTextAlignment(COLUMN_PRIORITY, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
-            is_mod_active = False 
-            try:
-                is_mod_active = mod.active() 
-            except AttributeError:
-                self._logger.warning(
-                    f"Could not determine active state for mod '{mod_name}' via active(). Assuming enabled for UI."
-                )
-                is_mod_active = True 
+            is_mod_active = bool(all_mods_manager.state(mod_name) & mobase.ModState.ACTIVE)
 
             if not is_mod_active:
                 item.setForeground(COLUMN_NAME, Qt.GlobalColor.gray)
                 item.setForeground(COLUMN_PRIORITY, Qt.GlobalColor.gray)
-                item.setToolTip(COLUMN_NAME, f"{mod_name} (Disabled in MO2 or state unknown)")
+                item.setToolTip(COLUMN_NAME, f"{mod_name} (Disabled in MO2)")
             else:
                 item.setToolTip(COLUMN_NAME, f"{mod_name} (Enabled in MO2)")
 
