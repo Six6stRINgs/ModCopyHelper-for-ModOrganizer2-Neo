@@ -122,9 +122,7 @@ class SimpleCopySettingsDialog(QDialog):
         self.setMinimumSize(600, 500)
 
         self._mod_tree_widget = QTreeWidget()
-        self._mod_tree_widget.setHeaderLabels(["", tr("column_name") if tr("column_name") != "column_name" else "Mod Name", 
-                                                 tr("column_priority") if tr("column_priority") != "column_priority" else "Priority", 
-                                                 tr("column_status") if tr("column_status") != "column_status" else "Status"])
+        self._mod_tree_widget.setHeaderLabels(["", tr("column_name"), tr("column_priority"), tr("column_status")])
         self._mod_tree_widget.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
         self._mod_tree_widget.setRootIsDecorated(False)
         self._mod_tree_widget.setAlternatingRowColors(True)

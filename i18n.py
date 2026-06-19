@@ -6,6 +6,11 @@ PLUGIN_NAME = "ModCopyHelper"
 
 TRANSLATIONS = {
     "en": {
+        # Column headers
+        "column_name": "Mod Name",
+        "column_priority": "Priority",
+        "column_status": "Status",
+        
         # Settings dialog
         "dialog_title": "Settings",
         "select_mods_label": "Select mods to copy to game directory on launch:",
@@ -48,6 +53,11 @@ TRANSLATIONS = {
         "profile_not_loaded_msg": "A ModOrganizer profile must be loaded to configure {name}.",
     },
     "zh_CN": {
+        # Column headers
+        "column_name": "模组名",
+        "column_priority": "优先级",
+        "column_status": "状态",
+        
         # Settings dialog
         "dialog_title": "设置",
         "select_mods_label": "选择要在启动时复制到游戏目录的模组：",
@@ -94,10 +104,18 @@ TRANSLATIONS = {
 _current_lang = "en"
 _translator = None
 
+def _find_mo2_config() -> Path | None:
+    plugin_dir = Path(__file__).resolve().parent
+    mo2_dir = plugin_dir.parent.parent
+    config_path = mo2_dir / "ModOrganizer.ini"
+    if config_path.exists():
+        return config_path
+    return None
+
 def get_system_language() -> str:
     try:
-        config_path = Path("E:/MO2/ModOrganizer.ini")
-        if config_path.exists():
+        config_path = _find_mo2_config()
+        if config_path:
             config = configparser.ConfigParser()
             config.read(config_path, encoding='utf-8')
             lang = config.get('Settings', 'language', fallback='en')
