@@ -33,6 +33,7 @@ class ModCopyHelperPlugin(mobase.IPluginTool, mobase.IPluginFileMapper):
             self._logic._ensure_paths_initialized()
             self._logic.load_settings()
             self._logic.check_and_handle_previous_crash()
+            self._logic.sync_mod_tags()
         else:
             self._logger.info("Profile not yet available during init. Path/settings load deferred.")
 
@@ -92,6 +93,7 @@ class ModCopyHelperPlugin(mobase.IPluginTool, mobase.IPluginFileMapper):
         if self._settings_dialog.exec(): 
             newly_selected_mods = self._settings_dialog.get_selected_mods()
             self._logic.set_selected_mods(newly_selected_mods)
+            self._logic.sync_mod_tags()
             self._logger.info(f"Settings applied via dialog. New selection: {newly_selected_mods}")
         else:
             self._logger.info("Settings dialog cancelled.")

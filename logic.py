@@ -7,6 +7,8 @@ from .logger import get_logger, PLUGIN_NAME
 
 SETTINGS_FILE_NAME = "modcopyhelper_settings.json" 
 MANIFEST_FILE_NAME = "modcopyhelper_manifest.json" 
+MCH_CATEGORY = "ModCopyHelper"
+MCH_NOTE_TAG = "[ModCopyHelper: Copy on launch]"
 
 class SimpleCopyLogic:
     def __init__(self, organizer: mobase.IOrganizer):
@@ -399,7 +401,72 @@ class SimpleCopyLogic:
         self._ensure_paths_initialized()
         self.load_settings()
         self.check_and_handle_previous_crash()
+        self.sync_mod_tags()
 
     def set_game_running_status(self, is_running: bool):
         self._is_game_running = is_running
         self._logger.info(f"Game running status set to {is_running}.")
+
+    def sync_mod_tags(self):
+        self._ensure_paths_initialized()
+        modlist = self._organizer.modList()
+        all_mods = modlist.allMods()
+
+        for mod_name in all_mods:
+            mod = modlist.getMod(mod_name)
+            if not mod or mod.isSeparator():
+                continue
+
+            current_categories = list(mod.categories())
+            current_notes = mod.notes() or ""
+
+            if mod_name in self._selected_mods:
+                if MCH_CATEGORY not in current_categories:
+                    mod.addCategory(MCH_CATEGORY)
+                    self._logger.debug(f"Added category '{MCH_CATEGORY}' to '{mod_name}'")
+
+                if MCH_NOTE_TAG not in current_notes:
+                    new_notes = (current_notes + "\n" + MCH_NOTE_TAG).strip() if current_notes else MCH_NOTE_TAG
+                    self._set_mod_notes(mod, new_notes)
+                    self._logger.debug(f"Added note tag to '{mod_name}'")
+            else:
+                if MCH_CATEGORY in current_categories:
+                    mod.removeCategory(MCH_CATEGORY)
+                    self._logger.debug(f"Removed category '{MCH_CATEGORY}' from '{mod_name}'")
+
+                if MCH_NOTE_TAG in current_notes:
+                    new_notes = current_notes.replace("\n" + MCH_NOTE_TAG, "").replace(MCH_NOTE_TAG, "").strip()
+                    self._set_mod_notes(mod, new_notes)
+                    self._logger.debug(f"Removed note tag from '{mod_name}'")
+
+        self._logger.info(f"Mod tags synced. Selected: {len(self._selected_mods)} mods.")
+
+    def _set_mod_notes(self, mod: mobase.IModInterface, notes: str):
+        mod_path = Path(mod.absolutePath())
+        meta_path = mod_path / "meta.ini"
+        if not meta_path.exists():
+            return
+
+        try:
+            with open(meta_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            lines = content.split('\n')
+            new_lines = []
+            found_notes = False
+            for line in lines:
+                if line.startswith('notes='):
+                    new_lines.append(f'notes={notes}')
+                    found_notes = True
+                else:
+                    new_lines.append(line)
+
+            if not found_notes:
+                new_lines.append(f'notes={notes}')
+
+            with open(meta_path, 'w', encoding='utf-8') as f:
+                f.write('\n'.join(new_lines))
+
+            self._organizer.modDataChanged(mod)
+        except Exception as e:
+            self._logger.error(f"Failed to set notes for '{mod.name()}': {e}", exc_info=True)
