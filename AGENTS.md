@@ -6,7 +6,7 @@ A ModOrganizer 2 plugin (Python/PyQt6) that copies selected mod files to the gam
 
 - `__init__.py` — Plugin entry point. Implements `mobase.IPluginTool` + `mobase.IPluginFileMapper`. Exports `createPlugin()` (MO2 convention).
 - `logic.py` — Core logic: file copy/remove, settings/manifest I/O, crash recovery, file mapping for overwrite redirection.
-- `ui.py` — PyQt6 `QDialog` for mod selection with filtering.
+- `ui.py` — PyQt6 `QDialog` for mod selection with filtering, table view (Name + Priority columns), sortable headers.
 - `logger.py` — Logging to both MO2 log system and a file under `<pluginDataPath>/modcopyhelper/`.
 
 ## Key Dependencies
