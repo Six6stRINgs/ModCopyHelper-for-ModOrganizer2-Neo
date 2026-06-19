@@ -5,8 +5,8 @@ from PyQt6.QtWidgets import (
     QPushButton, QLabel, QLineEdit, QAbstractItemView, QMessageBox,
     QHeaderView
 )
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor, QFont
+from PyQt6.QtCore import Qt, QEvent
+from PyQt6.QtGui import QColor, QFont, QMouseEvent
 
 from .logger import get_logger 
 
@@ -110,13 +110,14 @@ class SimpleCopySettingsDialog(QDialog):
         self._initial_selected_mods = set(current_selected_mods)
         self._current_selected_mods_on_dialog = set(current_selected_mods)
         self._updating_checks = False
+        self._last_clicked_item = None
 
         self.setWindowTitle(f"{self._logger.name} Settings") 
-        self.setMinimumSize(500, 400)
+        self.setMinimumSize(600, 500)
 
         self._mod_tree_widget = QTreeWidget()
         self._mod_tree_widget.setHeaderLabels(["", "Mod Name", "Priority", "Status"])
-        self._mod_tree_widget.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+        self._mod_tree_widget.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self._mod_tree_widget.setRootIsDecorated(False)
         self._mod_tree_widget.setAlternatingRowColors(True)
         self._mod_tree_widget.setSortingEnabled(True)
@@ -129,6 +130,7 @@ class SimpleCopySettingsDialog(QDialog):
         self._mod_tree_widget.header().setSectionResizeMode(COLUMN_STATUS, QHeaderView.ResizeMode.ResizeToContents)
         self._mod_tree_widget.header().resizeSection(COLUMN_CHECK, 30)
         self._mod_tree_widget.itemChanged.connect(self._on_item_changed)
+        self._mod_tree_widget.viewport().installEventFilter(self)
         
         self._filter_input = QLineEdit()
         self._filter_input.setPlaceholderText("Filter mods by name...")
@@ -144,6 +146,13 @@ class SimpleCopySettingsDialog(QDialog):
         self._apply_button.clicked.connect(self._apply_changes)
         self._apply_button.setEnabled(False) 
 
+        self._select_visible_button = QPushButton("Select Visible")
+        self._select_visible_button.clicked.connect(self._select_visible)
+        self._deselect_visible_button = QPushButton("Deselect Visible")
+        self._deselect_visible_button.clicked.connect(self._deselect_visible)
+        self._invert_selection_button = QPushButton("Invert Selection")
+        self._invert_selection_button.clicked.connect(self._invert_selection)
+
         auto_disable = self._organizer.pluginSetting("ModCopyHelper", "autoDisable")
         
         main_layout = QVBoxLayout(self)
@@ -155,6 +164,14 @@ class SimpleCopySettingsDialog(QDialog):
             main_layout.addWidget(warning_label)
         
         main_layout.addWidget(self._filter_input)
+        
+        bulk_layout = QHBoxLayout()
+        bulk_layout.addWidget(self._select_visible_button)
+        bulk_layout.addWidget(self._deselect_visible_button)
+        bulk_layout.addWidget(self._invert_selection_button)
+        bulk_layout.addStretch()
+        main_layout.addLayout(bulk_layout)
+        
         main_layout.addWidget(self._mod_tree_widget)
         
         button_layout = QHBoxLayout()
@@ -305,6 +322,83 @@ class SimpleCopySettingsDialog(QDialog):
 
     def _filter_mods(self):
         self._populate_mod_list()
+
+    def eventFilter(self, obj, event):
+        if obj == self._mod_tree_widget.viewport() and event.type() == QEvent.Type.MouseButtonPress:
+            if isinstance(event, QMouseEvent):
+                item = self._mod_tree_widget.itemAt(event.pos())
+                if item and not item.data(COLUMN_CHECK, IS_SEPARATOR_ROLE):
+                    column = self._mod_tree_widget.columnAt(event.pos().x())
+                    if column == COLUMN_NAME or column == COLUMN_CHECK:
+                        modifiers = event.modifiers()
+                        if modifiers & Qt.KeyboardModifier.ShiftModifier and self._last_clicked_item:
+                            self._shift_select_range(item)
+                        else:
+                            current_state = item.checkState(COLUMN_CHECK)
+                            new_state = Qt.CheckState.Unchecked if current_state == Qt.CheckState.Checked else Qt.CheckState.Checked
+                            item.setCheckState(COLUMN_CHECK, new_state)
+                        self._last_clicked_item = item
+                        return True
+        return super().eventFilter(obj, event)
+
+    def _shift_select_range(self, end_item):
+        if not self._last_clicked_item:
+            return
+        
+        start_index = self._mod_tree_widget.indexOfTopLevelItem(self._last_clicked_item)
+        end_index = self._mod_tree_widget.indexOfTopLevelItem(end_item)
+        
+        if start_index > end_index:
+            start_index, end_index = end_index, start_index
+        
+        target_state = end_item.checkState(COLUMN_CHECK)
+        new_state = Qt.CheckState.Unchecked if target_state == Qt.CheckState.Checked else Qt.CheckState.Checked
+        
+        self._updating_checks = True
+        for i in range(start_index, end_index + 1):
+            item = self._mod_tree_widget.topLevelItem(i)
+            if item and not item.data(COLUMN_CHECK, IS_SEPARATOR_ROLE):
+                item.setCheckState(COLUMN_CHECK, new_state)
+        self._updating_checks = False
+        self._update_apply_button_state()
+        self._refresh_all_conflict_status()
+
+    def _select_visible(self):
+        self._updating_checks = True
+        for i in range(self._mod_tree_widget.topLevelItemCount()):
+            item = self._mod_tree_widget.topLevelItem(i)
+            if not item.data(COLUMN_CHECK, IS_SEPARATOR_ROLE):
+                item.setCheckState(COLUMN_CHECK, Qt.CheckState.Checked)
+        self._updating_checks = False
+        self._update_apply_button_state()
+        self._refresh_all_conflict_status()
+
+    def _deselect_visible(self):
+        self._updating_checks = True
+        for i in range(self._mod_tree_widget.topLevelItemCount()):
+            item = self._mod_tree_widget.topLevelItem(i)
+            if not item.data(COLUMN_CHECK, IS_SEPARATOR_ROLE):
+                item.setCheckState(COLUMN_CHECK, Qt.CheckState.Unchecked)
+        self._updating_checks = False
+        self._update_apply_button_state()
+        self._refresh_all_conflict_status()
+
+    def _invert_selection(self):
+        self._updating_checks = True
+        for i in range(self._mod_tree_widget.topLevelItemCount()):
+            item = self._mod_tree_widget.topLevelItem(i)
+            if not item.data(COLUMN_CHECK, IS_SEPARATOR_ROLE):
+                current = item.checkState(COLUMN_CHECK)
+                item.setCheckState(COLUMN_CHECK, Qt.CheckState.Unchecked if current == Qt.CheckState.Checked else Qt.CheckState.Checked)
+        self._updating_checks = False
+        self._update_apply_button_state()
+        self._refresh_all_conflict_status()
+
+    def _refresh_all_conflict_status(self):
+        for i in range(self._mod_tree_widget.topLevelItemCount()):
+            item = self._mod_tree_widget.topLevelItem(i)
+            if not item.data(COLUMN_CHECK, IS_SEPARATOR_ROLE):
+                self._update_item_conflict_status(item)
 
     def _update_apply_button_state(self):
         currently_selected_ui = set()
