@@ -117,7 +117,7 @@ class SimpleCopySettingsDialog(QDialog):
 
         self._mod_tree_widget = QTreeWidget()
         self._mod_tree_widget.setHeaderLabels(["", "Mod Name", "Priority", "Status"])
-        self._mod_tree_widget.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self._mod_tree_widget.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
         self._mod_tree_widget.setRootIsDecorated(False)
         self._mod_tree_widget.setAlternatingRowColors(True)
         self._mod_tree_widget.setSortingEnabled(True)
@@ -263,9 +263,6 @@ class SimpleCopySettingsDialog(QDialog):
                         item.setCheckState(COLUMN_CHECK, Qt.CheckState.Unchecked)
 
             self._mod_tree_widget.addTopLevelItem(item)
-            
-            if not is_separator and is_selected:
-                item.setSelected(True)
         
         self._mod_tree_widget.setSortingEnabled(True)
         self._mod_tree_widget.sortByColumn(COLUMN_PRIORITY, Qt.SortOrder.AscendingOrder)
@@ -296,6 +293,8 @@ class SimpleCopySettingsDialog(QDialog):
         is_mod_active = bool(modlist.state(mod_name) & mobase.ModState.ACTIVE)
         has_conflict = is_selected and is_mod_active
         
+        default_color = item.data(COLUMN_NAME, Qt.ItemDataRole.ForegroundRole) or QColor(Qt.GlobalColor.black)
+        
         if has_conflict:
             item.setData(COLUMN_CHECK, CONFLICT_ROLE, True)
             item.setText(COLUMN_STATUS, "⚠ Conflict")
@@ -313,14 +312,16 @@ class SimpleCopySettingsDialog(QDialog):
                 item.setToolTip(COLUMN_STATUS, "此模组已选中，将在启动时复制到游戏目录")
             else:
                 item.setText(COLUMN_STATUS, "")
-                item.setForeground(COLUMN_STATUS, Qt.GlobalColor.white)
+                item.setForeground(COLUMN_STATUS, QColor())
                 item.setToolTip(COLUMN_STATUS, "")
             
             if is_mod_active:
-                item.setForeground(COLUMN_NAME, Qt.GlobalColor.white)
+                item.setForeground(COLUMN_NAME, QColor())
+                item.setForeground(COLUMN_PRIORITY, QColor())
                 item.setToolTip(COLUMN_NAME, f"{mod_name} (Enabled in MO2)")
             else:
                 item.setForeground(COLUMN_NAME, Qt.GlobalColor.gray)
+                item.setForeground(COLUMN_PRIORITY, Qt.GlobalColor.gray)
                 item.setToolTip(COLUMN_NAME, f"{mod_name} (Disabled in MO2)")
 
     def _filter_mods(self):
@@ -340,16 +341,9 @@ class SimpleCopySettingsDialog(QDialog):
                             current_state = item.checkState(COLUMN_CHECK)
                             new_state = Qt.CheckState.Unchecked if current_state == Qt.CheckState.Checked else Qt.CheckState.Checked
                             item.setCheckState(COLUMN_CHECK, new_state)
-                            self._sync_item_selection(item, new_state)
                         self._last_clicked_item = item
                         return True
         return super().eventFilter(obj, event)
-
-    def _sync_item_selection(self, item, state):
-        if state == Qt.CheckState.Checked:
-            item.setSelected(True)
-        else:
-            item.setSelected(False)
 
     def _shift_select_range(self, end_item):
         if not self._last_clicked_item:
@@ -369,7 +363,6 @@ class SimpleCopySettingsDialog(QDialog):
             item = self._mod_tree_widget.topLevelItem(i)
             if item and not item.data(COLUMN_CHECK, IS_SEPARATOR_ROLE):
                 item.setCheckState(COLUMN_CHECK, new_state)
-                self._sync_item_selection(item, new_state)
         self._updating_checks = False
         self._update_apply_button_state()
         self._refresh_all_conflict_status()
@@ -380,7 +373,6 @@ class SimpleCopySettingsDialog(QDialog):
             item = self._mod_tree_widget.topLevelItem(i)
             if not item.data(COLUMN_CHECK, IS_SEPARATOR_ROLE):
                 item.setCheckState(COLUMN_CHECK, Qt.CheckState.Checked)
-                self._sync_item_selection(item, Qt.CheckState.Checked)
         self._updating_checks = False
         self._update_apply_button_state()
         self._refresh_all_conflict_status()
@@ -391,7 +383,6 @@ class SimpleCopySettingsDialog(QDialog):
             item = self._mod_tree_widget.topLevelItem(i)
             if not item.data(COLUMN_CHECK, IS_SEPARATOR_ROLE):
                 item.setCheckState(COLUMN_CHECK, Qt.CheckState.Unchecked)
-                self._sync_item_selection(item, Qt.CheckState.Unchecked)
         self._updating_checks = False
         self._update_apply_button_state()
         self._refresh_all_conflict_status()
@@ -404,7 +395,6 @@ class SimpleCopySettingsDialog(QDialog):
                 current = item.checkState(COLUMN_CHECK)
                 new_state = Qt.CheckState.Unchecked if current == Qt.CheckState.Checked else Qt.CheckState.Checked
                 item.setCheckState(COLUMN_CHECK, new_state)
-                self._sync_item_selection(item, new_state)
         self._updating_checks = False
         self._update_apply_button_state()
         self._refresh_all_conflict_status()
