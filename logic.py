@@ -423,6 +423,10 @@ class SimpleCopyLogic:
             current_categories = list(mod.categories())
             current_notes = mod.notes() or ""
             is_selected = mod_name in self._selected_mods
+            
+            # 调试：打印前几个模组的备注状态
+            if mod_name in self._selected_mods[:2] or (not is_selected and len(current_notes) > 0):
+                self._logger.info(f"DEBUG '{mod_name}': selected={is_selected}, notes='{current_notes[:80]}...'")
 
             if mod_name in self._selected_mods[:3] or mod_name in [m for m in all_mods[:3]]:
                 self._logger.info(f"DEBUG: '{mod_name}' is_selected={is_selected}, categories={current_categories}")
@@ -452,8 +456,10 @@ class SimpleCopyLogic:
 
                 if MCH_NOTE_TAG in current_notes:
                     user_notes = current_notes.replace("\n" + MCH_NOTE_TAG, "").replace(MCH_NOTE_TAG, "").strip()
+                    self._logger.info(f"Removing note tag from '{mod_name}':")
+                    self._logger.info(f"  Before: '{current_notes}'")
+                    self._logger.info(f"  After:  '{user_notes}'")
                     self._set_mod_notes(mod, user_notes)
-                    self._logger.info(f"Removed note tag from '{mod_name}', remaining: '{user_notes[:50]}...'")
 
         self._logger.info(f"Mod tags sync completed.")
 
@@ -461,6 +467,7 @@ class SimpleCopyLogic:
         mod_path = Path(mod.absolutePath())
         meta_path = mod_path / "meta.ini"
         if not meta_path.exists():
+            self._logger.warning(f"meta.ini not found for '{mod.name()}'")
             return
 
         try:
@@ -469,27 +476,27 @@ class SimpleCopyLogic:
 
             lines = content.split('\n')
             new_lines = []
+            found_notes = False
             for line in lines:
                 if line.startswith('notes='):
+                    found_notes = True
                     if notes:
                         new_lines.append(f'notes={notes}')
-                    # 如果 notes 为空，跳过这行（删除 notes 字段）
+                        self._logger.debug(f"  Writing notes: '{notes[:50]}...'")
+                    else:
+                        self._logger.debug(f"  Removing empty notes line")
                 else:
                     new_lines.append(line)
 
-            # 如果原来没有 notes 字段且 notes 不为空，添加它
-            if notes and not any(l.startswith('notes=') for l in lines):
-                # 在 [General] 段后添加
-                for i, line in enumerate(new_lines):
-                    if line.strip() == '[General]':
-                        new_lines.insert(i + 1, f'notes={notes}')
-                        break
-                else:
-                    new_lines.append(f'notes={notes}')
+            if not found_notes and notes:
+                new_lines.append(f'notes={notes}')
+                self._logger.debug(f"  Adding new notes line")
 
+            new_content = '\n'.join(new_lines)
             with open(meta_path, 'w', encoding='utf-8') as f:
-                f.write('\n'.join(new_lines))
+                f.write(new_content)
 
+            self._logger.info(f"Updated notes for '{mod.name()}' in {meta_path}")
             self._organizer.modDataChanged(mod)
         except Exception as e:
             self._logger.error(f"Failed to set notes for '{mod.name()}': {e}", exc_info=True)
