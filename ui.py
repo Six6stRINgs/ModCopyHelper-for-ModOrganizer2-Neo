@@ -21,6 +21,7 @@ PRIORITY_SORT_ROLE = Qt.ItemDataRole.UserRole + 3
 CONFLICT_ROLE = Qt.ItemDataRole.UserRole + 4
 
 CONFLICT_COLOR = QColor(220, 50, 50)
+SELECTED_BG_COLOR = QColor(60, 120, 200, 60)
 
 DEFAULT_SEPARATOR_COLOR = QColor(100, 149, 237)
 
@@ -293,27 +294,38 @@ class SimpleCopySettingsDialog(QDialog):
         is_mod_active = bool(modlist.state(mod_name) & mobase.ModState.ACTIVE)
         has_conflict = is_selected and is_mod_active
         
-        default_color = item.data(COLUMN_NAME, Qt.ItemDataRole.ForegroundRole) or QColor(Qt.GlobalColor.black)
-        
         if has_conflict:
             item.setData(COLUMN_CHECK, CONFLICT_ROLE, True)
             item.setText(COLUMN_STATUS, "⚠ Conflict")
             item.setForeground(COLUMN_STATUS, CONFLICT_COLOR)
             item.setFont(COLUMN_STATUS, self._bold_font())
             item.setForeground(COLUMN_NAME, CONFLICT_COLOR)
+            item.setBackground(COLUMN_CHECK, SELECTED_BG_COLOR)
+            item.setBackground(COLUMN_NAME, SELECTED_BG_COLOR)
+            item.setBackground(COLUMN_PRIORITY, SELECTED_BG_COLOR)
+            item.setBackground(COLUMN_STATUS, SELECTED_BG_COLOR)
             item.setToolTip(COLUMN_NAME, f"{mod_name}\n⚠ This mod is enabled in MO2 AND selected in plugin!\nIt will be disabled in MO2 on Apply.")
             item.setToolTip(COLUMN_STATUS, "警告：此模组同时在MO2中启用！\n请取消勾选或在MO2中禁用此模组。\nApply后将自动在MO2中禁用。")
         else:
             item.setData(COLUMN_CHECK, CONFLICT_ROLE, False)
             item.setFont(COLUMN_STATUS, self.font())
+            
             if is_selected:
                 item.setText(COLUMN_STATUS, "✔")
                 item.setForeground(COLUMN_STATUS, QColor(50, 180, 50))
                 item.setToolTip(COLUMN_STATUS, "此模组已选中，将在启动时复制到游戏目录")
+                item.setBackground(COLUMN_CHECK, SELECTED_BG_COLOR)
+                item.setBackground(COLUMN_NAME, SELECTED_BG_COLOR)
+                item.setBackground(COLUMN_PRIORITY, SELECTED_BG_COLOR)
+                item.setBackground(COLUMN_STATUS, SELECTED_BG_COLOR)
             else:
                 item.setText(COLUMN_STATUS, "")
                 item.setForeground(COLUMN_STATUS, QColor())
                 item.setToolTip(COLUMN_STATUS, "")
+                item.setBackground(COLUMN_CHECK, QColor())
+                item.setBackground(COLUMN_NAME, QColor())
+                item.setBackground(COLUMN_PRIORITY, QColor())
+                item.setBackground(COLUMN_STATUS, QColor())
             
             if is_mod_active:
                 item.setForeground(COLUMN_NAME, QColor())
