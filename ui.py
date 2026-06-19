@@ -22,6 +22,7 @@ CONFLICT_ROLE = Qt.ItemDataRole.UserRole + 4
 
 CONFLICT_COLOR = QColor(220, 50, 50)
 SELECTED_BG_COLOR = QColor(60, 120, 200, 60)
+TRANSPARENT_COLOR = QColor(0, 0, 0, 0)
 
 DEFAULT_SEPARATOR_COLOR = QColor(100, 149, 237)
 
@@ -320,16 +321,16 @@ class SimpleCopySettingsDialog(QDialog):
                 item.setBackground(COLUMN_STATUS, SELECTED_BG_COLOR)
             else:
                 item.setText(COLUMN_STATUS, "")
-                item.setForeground(COLUMN_STATUS, QColor())
+                item.setForeground(COLUMN_STATUS, TRANSPARENT_COLOR)
                 item.setToolTip(COLUMN_STATUS, "")
-                item.setBackground(COLUMN_CHECK, QColor())
-                item.setBackground(COLUMN_NAME, QColor())
-                item.setBackground(COLUMN_PRIORITY, QColor())
-                item.setBackground(COLUMN_STATUS, QColor())
+                item.setBackground(COLUMN_CHECK, TRANSPARENT_COLOR)
+                item.setBackground(COLUMN_NAME, TRANSPARENT_COLOR)
+                item.setBackground(COLUMN_PRIORITY, TRANSPARENT_COLOR)
+                item.setBackground(COLUMN_STATUS, TRANSPARENT_COLOR)
             
             if is_mod_active:
-                item.setForeground(COLUMN_NAME, QColor())
-                item.setForeground(COLUMN_PRIORITY, QColor())
+                item.setForeground(COLUMN_NAME, QColor(Qt.GlobalColor.black))
+                item.setForeground(COLUMN_PRIORITY, QColor(Qt.GlobalColor.black))
                 item.setToolTip(COLUMN_NAME, f"{mod_name} (Enabled in MO2)")
             else:
                 item.setForeground(COLUMN_NAME, Qt.GlobalColor.gray)
