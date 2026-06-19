@@ -412,7 +412,8 @@ class SimpleCopyLogic:
         modlist = self._organizer.modList()
         all_mods = modlist.allMods()
 
-        self._logger.info(f"Syncing mod tags. Selected mods: {len(self._selected_mods)}")
+        self._logger.info(f"Syncing mod tags. Selected mods count: {len(self._selected_mods)}")
+        self._logger.info(f"Selected mods: {self._selected_mods}")
 
         for mod_name in all_mods:
             mod = modlist.getMod(mod_name)
@@ -421,28 +422,37 @@ class SimpleCopyLogic:
 
             current_categories = list(mod.categories())
             current_notes = mod.notes() or ""
+            is_selected = mod_name in self._selected_mods
 
-            if mod_name in self._selected_mods:
+            if mod_name in self._selected_mods[:3] or mod_name in [m for m in all_mods[:3]]:
+                self._logger.info(f"DEBUG: '{mod_name}' is_selected={is_selected}, categories={current_categories}")
+
+            if is_selected:
                 if MCH_CATEGORY not in current_categories:
-                    mod.addCategory(MCH_CATEGORY)
-                    self._logger.debug(f"Added category '{MCH_CATEGORY}' to '{mod_name}'")
+                    try:
+                        mod.addCategory(MCH_CATEGORY)
+                        self._logger.info(f"Added category '{MCH_CATEGORY}' to '{mod_name}'")
+                    except Exception as e:
+                        self._logger.error(f"Failed to add category to '{mod_name}': {e}")
 
                 if MCH_NOTE_TAG not in current_notes:
                     new_notes = (current_notes + "\n" + MCH_NOTE_TAG).strip() if current_notes else MCH_NOTE_TAG
                     self._set_mod_notes(mod, new_notes)
-                    self._logger.debug(f"Added note tag to '{mod_name}'")
+                    self._logger.info(f"Added note tag to '{mod_name}'")
             else:
                 if MCH_CATEGORY in current_categories:
-                    result = mod.removeCategory(MCH_CATEGORY)
-                    self._logger.info(f"Removed category '{MCH_CATEGORY}' from '{mod_name}': {result}")
-                    self._logger.debug(f"Categories after removal: {list(mod.categories())}")
+                    try:
+                        result = mod.removeCategory(MCH_CATEGORY)
+                        self._logger.info(f"Removed category '{MCH_CATEGORY}' from '{mod_name}': {result}")
+                    except Exception as e:
+                        self._logger.error(f"Failed to remove category from '{mod_name}': {e}")
 
                 if MCH_NOTE_TAG in current_notes:
                     new_notes = current_notes.replace("\n" + MCH_NOTE_TAG, "").replace(MCH_NOTE_TAG, "").strip()
                     self._set_mod_notes(mod, new_notes)
-                    self._logger.debug(f"Removed note tag from '{mod_name}'")
+                    self._logger.info(f"Removed note tag from '{mod_name}'")
 
-        self._logger.info(f"Mod tags synced. Selected: {len(self._selected_mods)} mods.")
+        self._logger.info(f"Mod tags sync completed.")
 
     def _set_mod_notes(self, mod: mobase.IModInterface, notes: str):
         mod_path = Path(mod.absolutePath())
