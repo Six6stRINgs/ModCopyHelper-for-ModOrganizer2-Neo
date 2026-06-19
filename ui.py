@@ -371,52 +371,38 @@ class SimpleCopySettingsDialog(QDialog):
         target_state = end_item.checkState(COLUMN_CHECK)
         new_state = Qt.CheckState.Unchecked if target_state == Qt.CheckState.Checked else Qt.CheckState.Checked
         
-        self._updating_checks = True
         for i in range(start_index, end_index + 1):
             item = self._mod_tree_widget.topLevelItem(i)
             if item and not item.data(COLUMN_CHECK, IS_SEPARATOR_ROLE):
                 item.setCheckState(COLUMN_CHECK, new_state)
-        self._updating_checks = False
+                self._update_item_conflict_status(item)
         self._update_apply_button_state()
-        self._refresh_all_conflict_status()
 
     def _select_visible(self):
-        self._updating_checks = True
         for i in range(self._mod_tree_widget.topLevelItemCount()):
             item = self._mod_tree_widget.topLevelItem(i)
             if not item.data(COLUMN_CHECK, IS_SEPARATOR_ROLE):
                 item.setCheckState(COLUMN_CHECK, Qt.CheckState.Checked)
-        self._updating_checks = False
+                self._update_item_conflict_status(item)
         self._update_apply_button_state()
-        self._refresh_all_conflict_status()
 
     def _deselect_visible(self):
-        self._updating_checks = True
         for i in range(self._mod_tree_widget.topLevelItemCount()):
             item = self._mod_tree_widget.topLevelItem(i)
             if not item.data(COLUMN_CHECK, IS_SEPARATOR_ROLE):
                 item.setCheckState(COLUMN_CHECK, Qt.CheckState.Unchecked)
-        self._updating_checks = False
+                self._update_item_conflict_status(item)
         self._update_apply_button_state()
-        self._refresh_all_conflict_status()
 
     def _invert_selection(self):
-        self._updating_checks = True
         for i in range(self._mod_tree_widget.topLevelItemCount()):
             item = self._mod_tree_widget.topLevelItem(i)
             if not item.data(COLUMN_CHECK, IS_SEPARATOR_ROLE):
                 current = item.checkState(COLUMN_CHECK)
                 new_state = Qt.CheckState.Unchecked if current == Qt.CheckState.Checked else Qt.CheckState.Checked
                 item.setCheckState(COLUMN_CHECK, new_state)
-        self._updating_checks = False
-        self._update_apply_button_state()
-        self._refresh_all_conflict_status()
-
-    def _refresh_all_conflict_status(self):
-        for i in range(self._mod_tree_widget.topLevelItemCount()):
-            item = self._mod_tree_widget.topLevelItem(i)
-            if not item.data(COLUMN_CHECK, IS_SEPARATOR_ROLE):
                 self._update_item_conflict_status(item)
+        self._update_apply_button_state()
 
     def _update_apply_button_state(self):
         currently_selected_ui = set()
