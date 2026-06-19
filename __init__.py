@@ -6,6 +6,7 @@ from pathlib import Path
 from .logger import setup_logger, get_logger, PLUGIN_NAME as PLUGIN_NAME_CONST
 from .logic import SimpleCopyLogic
 from .ui import SimpleCopySettingsDialog
+from .i18n import init_translations, tr
 
 class ModCopyHelperPlugin(mobase.IPluginTool, mobase.IPluginFileMapper): 
     def __init__(self):
@@ -26,6 +27,8 @@ class ModCopyHelperPlugin(mobase.IPluginTool, mobase.IPluginFileMapper):
         global LOGGER 
         LOGGER = setup_logger(self._organizer)
         self._logger = get_logger()
+        
+        init_translations(self._organizer)
 
         self._logic = SimpleCopyLogic(self._organizer)
 
@@ -66,9 +69,10 @@ class ModCopyHelperPlugin(mobase.IPluginTool, mobase.IPluginFileMapper):
 
     def settings(self) -> list[mobase.PluginSetting]:
         return [
-            mobase.PluginSetting("enabled", f"Enable {self.name()}", True), 
-            mobase.PluginSetting("logLevel", "Logging Level (DEBUG, INFO, WARNING, ERROR)", "INFO"),
-            mobase.PluginSetting("autoDisable", "Auto-disable selected mods in MO2", True)
+            mobase.PluginSetting("enabled", tr("setting_enabled", name=self.name()), True), 
+            mobase.PluginSetting("logLevel", tr("setting_log_level"), "INFO"),
+            mobase.PluginSetting("autoDisable", tr("setting_auto_disable"), True),
+            mobase.PluginSetting("language", tr("setting_language"), "auto")
         ]
 
     def displayName(self) -> str:
@@ -82,8 +86,8 @@ class ModCopyHelperPlugin(mobase.IPluginTool, mobase.IPluginFileMapper):
 
     def display(self):
         if not self._organizer.profilePath():
-            QMessageBox.warning(None, "Profile Not Loaded", 
-                                f"A ModOrganizer profile must be loaded to configure {self.name()}.")
+            QMessageBox.warning(None, tr("profile_not_loaded_title"), 
+                                tr("profile_not_loaded_msg", name=self.name()))
             return
 
         self._logic.load_settings() 

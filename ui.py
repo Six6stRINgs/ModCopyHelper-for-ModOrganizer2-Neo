@@ -8,7 +8,8 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QEvent
 from PyQt6.QtGui import QColor, QFont, QMouseEvent, QAction
 
-from .logger import get_logger 
+from .logger import get_logger
+from .i18n import tr
 
 COLUMN_CHECK = 0
 COLUMN_NAME = 1
@@ -117,11 +118,13 @@ class SimpleCopySettingsDialog(QDialog):
         self._last_clicked_item = None
         self._highlighted_items = set()
 
-        self.setWindowTitle(f"{self._logger.name} Settings") 
+        self.setWindowTitle(f"{self._logger.name} - {tr('dialog_title')}") 
         self.setMinimumSize(600, 500)
 
         self._mod_tree_widget = QTreeWidget()
-        self._mod_tree_widget.setHeaderLabels(["", "Mod Name", "Priority", "Status"])
+        self._mod_tree_widget.setHeaderLabels(["", tr("column_name") if tr("column_name") != "column_name" else "Mod Name", 
+                                                 tr("column_priority") if tr("column_priority") != "column_priority" else "Priority", 
+                                                 tr("column_status") if tr("column_status") != "column_status" else "Status"])
         self._mod_tree_widget.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
         self._mod_tree_widget.setRootIsDecorated(False)
         self._mod_tree_widget.setAlternatingRowColors(True)
@@ -140,30 +143,30 @@ class SimpleCopySettingsDialog(QDialog):
         self._mod_tree_widget.customContextMenuRequested.connect(self._show_context_menu)
         
         self._filter_input = QLineEdit()
-        self._filter_input.setPlaceholderText("Filter mods by name...")
+        self._filter_input.setPlaceholderText(tr("filter_placeholder"))
         self._filter_input.textChanged.connect(self._filter_mods)
 
         self._populate_mod_list()
 
-        self._ok_button = QPushButton("OK")
+        self._ok_button = QPushButton(tr("ok_button"))
         self._ok_button.clicked.connect(self.accept)
-        self._cancel_button = QPushButton("Cancel")
+        self._cancel_button = QPushButton(tr("cancel_button"))
         self._cancel_button.clicked.connect(self.reject)
-        self._apply_button = QPushButton("Apply")
+        self._apply_button = QPushButton(tr("apply_button"))
         self._apply_button.clicked.connect(self._apply_changes)
         self._apply_button.setEnabled(False) 
 
         auto_disable = self._organizer.pluginSetting("ModCopyHelper", "autoDisable")
         
         main_layout = QVBoxLayout(self)
-        main_layout.addWidget(QLabel("Select mods to copy to game directory on launch:"))
+        main_layout.addWidget(QLabel(tr("select_mods_label")))
         
         if auto_disable:
-            warning_label = QLabel("⚠ Selected mods will be automatically disabled in MO2 after Apply.")
+            warning_label = QLabel(tr("auto_disable_warning"))
             warning_label.setStyleSheet("color: orange; font-weight: bold;")
             main_layout.addWidget(warning_label)
         
-        hint_label = QLabel("右键菜单：选择/取消/全选/反选 | Shift+点击：连续选择")
+        hint_label = QLabel(tr("hint_label"))
         hint_label.setStyleSheet("color: gray; font-size: 11px;")
         main_layout.addWidget(hint_label)
         
@@ -291,20 +294,20 @@ class SimpleCopySettingsDialog(QDialog):
         
         if has_conflict:
             item.setData(COLUMN_CHECK, CONFLICT_ROLE, True)
-            item.setText(COLUMN_STATUS, "⚠ Conflict")
+            item.setText(COLUMN_STATUS, tr("status_conflict"))
             item.setForeground(COLUMN_STATUS, CONFLICT_COLOR)
             item.setFont(COLUMN_STATUS, self._bold_font())
             item.setForeground(COLUMN_NAME, CONFLICT_COLOR)
-            item.setToolTip(COLUMN_NAME, f"{mod_name}\n⚠ This mod is enabled in MO2 AND selected in plugin!\nIt will be disabled in MO2 on Apply.")
-            item.setToolTip(COLUMN_STATUS, "警告：此模组同时在MO2中启用！\n请取消勾选或在MO2中禁用此模组。\nApply后将自动在MO2中禁用。")
+            item.setToolTip(COLUMN_NAME, f"{mod_name}\n{tr('mod_conflict')}")
+            item.setToolTip(COLUMN_STATUS, tr("status_conflict_tooltip"))
         else:
             item.setData(COLUMN_CHECK, CONFLICT_ROLE, False)
             item.setFont(COLUMN_STATUS, self.font())
             
             if is_selected:
-                item.setText(COLUMN_STATUS, "✔")
+                item.setText(COLUMN_STATUS, tr("status_selected"))
                 item.setForeground(COLUMN_STATUS, QColor(50, 180, 50))
-                item.setToolTip(COLUMN_STATUS, "此模组已选中，将在启动时复制到游戏目录")
+                item.setToolTip(COLUMN_STATUS, tr("status_selected_tooltip"))
             else:
                 item.setText(COLUMN_STATUS, "")
                 item.setForeground(COLUMN_STATUS, TRANSPARENT_COLOR)
@@ -313,11 +316,11 @@ class SimpleCopySettingsDialog(QDialog):
             if is_mod_active:
                 item.setForeground(COLUMN_NAME, QColor(Qt.GlobalColor.black))
                 item.setForeground(COLUMN_PRIORITY, QColor(Qt.GlobalColor.black))
-                item.setToolTip(COLUMN_NAME, f"{mod_name} (Enabled in MO2)")
+                item.setToolTip(COLUMN_NAME, f"{mod_name} {tr('mod_enabled')}")
             else:
                 item.setForeground(COLUMN_NAME, Qt.GlobalColor.gray)
                 item.setForeground(COLUMN_PRIORITY, Qt.GlobalColor.gray)
-                item.setToolTip(COLUMN_NAME, f"{mod_name} (Disabled in MO2)")
+                item.setToolTip(COLUMN_NAME, f"{mod_name} {tr('mod_disabled')}")
 
     def _filter_mods(self):
         self._highlighted_items.clear()
@@ -388,24 +391,24 @@ class SimpleCopySettingsDialog(QDialog):
         
         if item and not item.data(COLUMN_CHECK, IS_SEPARATOR_ROLE):
             if item.checkState(COLUMN_CHECK) == Qt.CheckState.Checked:
-                deselect_action = QAction("取消选择", self)
+                deselect_action = QAction(tr("menu_deselect"), self)
                 deselect_action.triggered.connect(lambda: self._toggle_item(item, False))
                 menu.addAction(deselect_action)
             else:
-                select_action = QAction("选择", self)
+                select_action = QAction(tr("menu_select"), self)
                 select_action.triggered.connect(lambda: self._toggle_item(item, True))
                 menu.addAction(select_action)
             menu.addSeparator()
         
-        select_all_action = QAction("全选可见", self)
+        select_all_action = QAction(tr("menu_select_all"), self)
         select_all_action.triggered.connect(self._select_all_visible)
         menu.addAction(select_all_action)
         
-        deselect_all_action = QAction("取消全选", self)
+        deselect_all_action = QAction(tr("menu_deselect_all"), self)
         deselect_all_action.triggered.connect(self._deselect_all_visible)
         menu.addAction(deselect_all_action)
         
-        invert_action = QAction("反选", self)
+        invert_action = QAction(tr("menu_invert"), self)
         invert_action.triggered.connect(self._invert_selection)
         menu.addAction(invert_action)
         
