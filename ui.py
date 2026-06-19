@@ -434,10 +434,6 @@ class SimpleCopySettingsDialog(QDialog):
                 item.setCheckState(COLUMN_CHECK, new_state)
                 self._update_item_conflict_status(item)
         self._update_apply_button_state()
-                item.setBackground(COLUMN_STATUS, SELECTED_BG_COLOR)
-                self._update_item_conflict_status(item)
-        self._preview_items.clear()
-        self._update_apply_button_state()
 
     def _select_all_visible(self):
         for i in range(self._mod_tree_widget.topLevelItemCount()):
