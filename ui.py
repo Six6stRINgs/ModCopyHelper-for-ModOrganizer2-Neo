@@ -22,7 +22,6 @@ CONFLICT_ROLE = Qt.ItemDataRole.UserRole + 4
 
 CONFLICT_COLOR = QColor(220, 50, 50)
 SELECTED_BG_COLOR = QColor(60, 120, 200, 60)
-PREVIEW_BG_COLOR = QColor(60, 120, 200, 30)
 TRANSPARENT_COLOR = QColor(0, 0, 0, 0)
 
 DEFAULT_SEPARATOR_COLOR = QColor(100, 149, 237)
@@ -105,8 +104,6 @@ class ModTreeWidgetItem(QTreeWidgetItem):
             return self.data(COLUMN_PRIORITY, PRIORITY_SORT_ROLE) < other.data(COLUMN_PRIORITY, PRIORITY_SORT_ROLE)
         return super().__lt__(other)
 
-IS_PREVIEW_ROLE = Qt.ItemDataRole.UserRole + 5
-
 class SimpleCopySettingsDialog(QDialog): 
     def __init__(self, organizer: mobase.IOrganizer, current_selected_mods: list[str], parent=None):
         super().__init__(parent)
@@ -116,7 +113,6 @@ class SimpleCopySettingsDialog(QDialog):
         self._current_selected_mods_on_dialog = set(current_selected_mods)
         self._updating_checks = False
         self._last_clicked_item = None
-        self._preview_items = []
 
         self.setWindowTitle(f"{self._logger.name} Settings") 
         self.setMinimumSize(600, 500)
@@ -164,7 +160,7 @@ class SimpleCopySettingsDialog(QDialog):
             warning_label.setStyleSheet("color: orange; font-weight: bold;")
             main_layout.addWidget(warning_label)
         
-        hint_label = QLabel("右键菜单：选择/取消/全选/反选 | Shift+点击预览选择范围，右键确认")
+        hint_label = QLabel("右键菜单：选择/取消/全选/反选 | Shift+点击：连续选择")
         hint_label.setStyleSheet("color: gray; font-size: 11px;")
         main_layout.addWidget(hint_label)
         
@@ -333,21 +329,22 @@ class SimpleCopySettingsDialog(QDialog):
                 item.setToolTip(COLUMN_NAME, f"{mod_name} (Disabled in MO2)")
 
     def _filter_mods(self):
-        self._clear_preview()
         self._populate_mod_list()
 
     def eventFilter(self, obj, event):
         if obj == self._mod_tree_widget.viewport() and event.type() == QEvent.Type.MouseButtonPress:
             if isinstance(event, QMouseEvent):
+                if event.button() == Qt.MouseButton.RightButton:
+                    return False
+                
                 item = self._mod_tree_widget.itemAt(event.pos())
                 if item and not item.data(COLUMN_CHECK, IS_SEPARATOR_ROLE):
                     column = self._mod_tree_widget.columnAt(event.pos().x())
                     if column == COLUMN_NAME or column == COLUMN_CHECK:
                         modifiers = event.modifiers()
                         if modifiers & Qt.KeyboardModifier.ShiftModifier and self._last_clicked_item:
-                            self._shift_preview_range(item)
+                            self._shift_select_range(item)
                         else:
-                            self._clear_preview()
                             current_state = item.checkState(COLUMN_CHECK)
                             new_state = Qt.CheckState.Unchecked if current_state == Qt.CheckState.Checked else Qt.CheckState.Checked
                             item.setCheckState(COLUMN_CHECK, new_state)
@@ -360,16 +357,6 @@ class SimpleCopySettingsDialog(QDialog):
         menu = QMenu(self)
         
         item = self._mod_tree_widget.itemAt(position)
-        
-        if self._preview_items:
-            confirm_action = QAction("确认选择范围", self)
-            confirm_action.triggered.connect(self._confirm_preview)
-            menu.addAction(confirm_action)
-            
-            clear_action = QAction("取消预览", self)
-            clear_action.triggered.connect(self._clear_preview)
-            menu.addAction(clear_action)
-            menu.addSeparator()
         
         if item and not item.data(COLUMN_CHECK, IS_SEPARATOR_ROLE):
             if item.checkState(COLUMN_CHECK) == Qt.CheckState.Checked:
@@ -402,8 +389,9 @@ class SimpleCopySettingsDialog(QDialog):
         self._update_item_conflict_status(item)
         self._update_apply_button_state()
 
-    def _shift_preview_range(self, end_item):
-        self._clear_preview()
+    def _shift_select_range(self, end_item):
+        if not self._last_clicked_item:
+            return
         
         start_index = self._mod_tree_widget.indexOfTopLevelItem(self._last_clicked_item)
         end_index = self._mod_tree_widget.indexOfTopLevelItem(end_item)
@@ -411,36 +399,41 @@ class SimpleCopySettingsDialog(QDialog):
         if start_index > end_index:
             start_index, end_index = end_index, start_index
         
+        target_state = end_item.checkState(COLUMN_CHECK)
+        new_state = Qt.CheckState.Unchecked if target_state == Qt.CheckState.Checked else Qt.CheckState.Checked
+        
         for i in range(start_index, end_index + 1):
             item = self._mod_tree_widget.topLevelItem(i)
             if item and not item.data(COLUMN_CHECK, IS_SEPARATOR_ROLE):
-                item.setData(COLUMN_CHECK, IS_PREVIEW_ROLE, True)
-                item.setBackground(COLUMN_CHECK, PREVIEW_BG_COLOR)
-                item.setBackground(COLUMN_NAME, PREVIEW_BG_COLOR)
-                item.setBackground(COLUMN_PRIORITY, PREVIEW_BG_COLOR)
-                item.setBackground(COLUMN_STATUS, PREVIEW_BG_COLOR)
-                self._preview_items.append(item)
+                item.setCheckState(COLUMN_CHECK, new_state)
+                self._update_item_conflict_status(item)
+        self._update_apply_button_state()
 
-    def _clear_preview(self):
-        for item in self._preview_items:
-            if item:
-                item.setData(COLUMN_CHECK, IS_PREVIEW_ROLE, False)
-                is_selected = item.checkState(COLUMN_CHECK) == Qt.CheckState.Checked
-                bg = SELECTED_BG_COLOR if is_selected else TRANSPARENT_COLOR
-                item.setBackground(COLUMN_CHECK, bg)
-                item.setBackground(COLUMN_NAME, bg)
-                item.setBackground(COLUMN_PRIORITY, bg)
-                item.setBackground(COLUMN_STATUS, bg)
-        self._preview_items.clear()
-
-    def _confirm_preview(self):
-        for item in self._preview_items:
-            if item:
-                item.setData(COLUMN_CHECK, IS_PREVIEW_ROLE, False)
+    def _select_all_visible(self):
+        for i in range(self._mod_tree_widget.topLevelItemCount()):
+            item = self._mod_tree_widget.topLevelItem(i)
+            if item and not item.data(COLUMN_CHECK, IS_SEPARATOR_ROLE):
                 item.setCheckState(COLUMN_CHECK, Qt.CheckState.Checked)
-                item.setBackground(COLUMN_CHECK, SELECTED_BG_COLOR)
-                item.setBackground(COLUMN_NAME, SELECTED_BG_COLOR)
-                item.setBackground(COLUMN_PRIORITY, SELECTED_BG_COLOR)
+                self._update_item_conflict_status(item)
+        self._update_apply_button_state()
+
+    def _deselect_all_visible(self):
+        for i in range(self._mod_tree_widget.topLevelItemCount()):
+            item = self._mod_tree_widget.topLevelItem(i)
+            if item and not item.data(COLUMN_CHECK, IS_SEPARATOR_ROLE):
+                item.setCheckState(COLUMN_CHECK, Qt.CheckState.Unchecked)
+                self._update_item_conflict_status(item)
+        self._update_apply_button_state()
+
+    def _invert_selection(self):
+        for i in range(self._mod_tree_widget.topLevelItemCount()):
+            item = self._mod_tree_widget.topLevelItem(i)
+            if item and not item.data(COLUMN_CHECK, IS_SEPARATOR_ROLE):
+                current = item.checkState(COLUMN_CHECK)
+                new_state = Qt.CheckState.Unchecked if current == Qt.CheckState.Checked else Qt.CheckState.Checked
+                item.setCheckState(COLUMN_CHECK, new_state)
+                self._update_item_conflict_status(item)
+        self._update_apply_button_state()
                 item.setBackground(COLUMN_STATUS, SELECTED_BG_COLOR)
                 self._update_item_conflict_status(item)
         self._preview_items.clear()
