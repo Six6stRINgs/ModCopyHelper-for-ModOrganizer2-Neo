@@ -436,7 +436,10 @@ class SimpleCopyLogic:
                         self._logger.error(f"Failed to add category to '{mod_name}': {e}")
 
                 if MCH_NOTE_TAG not in current_notes:
-                    new_notes = (current_notes + "\n" + MCH_NOTE_TAG).strip() if current_notes else MCH_NOTE_TAG
+                    if current_notes:
+                        new_notes = current_notes.rstrip() + "\n" + MCH_NOTE_TAG
+                    else:
+                        new_notes = MCH_NOTE_TAG
                     self._set_mod_notes(mod, new_notes)
                     self._logger.info(f"Added note tag to '{mod_name}'")
             else:
@@ -448,9 +451,9 @@ class SimpleCopyLogic:
                         self._logger.error(f"Failed to remove category from '{mod_name}': {e}")
 
                 if MCH_NOTE_TAG in current_notes:
-                    new_notes = current_notes.replace("\n" + MCH_NOTE_TAG, "").replace(MCH_NOTE_TAG, "").strip()
-                    self._set_mod_notes(mod, new_notes)
-                    self._logger.info(f"Removed note tag from '{mod_name}'")
+                    user_notes = current_notes.replace("\n" + MCH_NOTE_TAG, "").replace(MCH_NOTE_TAG, "").strip()
+                    self._set_mod_notes(mod, user_notes)
+                    self._logger.info(f"Removed note tag from '{mod_name}', remaining: '{user_notes[:50]}...'")
 
         self._logger.info(f"Mod tags sync completed.")
 
@@ -466,16 +469,23 @@ class SimpleCopyLogic:
 
             lines = content.split('\n')
             new_lines = []
-            found_notes = False
             for line in lines:
                 if line.startswith('notes='):
-                    new_lines.append(f'notes={notes}')
-                    found_notes = True
+                    if notes:
+                        new_lines.append(f'notes={notes}')
+                    # 如果 notes 为空，跳过这行（删除 notes 字段）
                 else:
                     new_lines.append(line)
 
-            if not found_notes:
-                new_lines.append(f'notes={notes}')
+            # 如果原来没有 notes 字段且 notes 不为空，添加它
+            if notes and not any(l.startswith('notes=') for l in lines):
+                # 在 [General] 段后添加
+                for i, line in enumerate(new_lines):
+                    if line.strip() == '[General]':
+                        new_lines.insert(i + 1, f'notes={notes}')
+                        break
+                else:
+                    new_lines.append(f'notes={notes}')
 
             with open(meta_path, 'w', encoding='utf-8') as f:
                 f.write('\n'.join(new_lines))
