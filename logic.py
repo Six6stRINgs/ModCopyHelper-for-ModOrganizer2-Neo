@@ -8,7 +8,6 @@ from .logger import get_logger, PLUGIN_NAME
 SETTINGS_FILE_NAME = "modcopyhelper_settings.json" 
 MANIFEST_FILE_NAME = "modcopyhelper_manifest.json" 
 MCH_CATEGORY = "ModCopyHelper"
-MCH_NOTE_TAG = "[ModCopyHelper: Copy on launch]"
 
 class SimpleCopyLogic:
     def __init__(self, organizer: mobase.IOrganizer):
@@ -412,8 +411,7 @@ class SimpleCopyLogic:
         modlist = self._organizer.modList()
         all_mods = modlist.allMods()
 
-        self._logger.info(f"Syncing mod tags. Selected mods count: {len(self._selected_mods)}")
-        self._logger.info(f"Selected mods: {self._selected_mods}")
+        self._logger.info(f"Syncing mod categories. Selected mods: {len(self._selected_mods)}")
 
         for mod_name in all_mods:
             mod = modlist.getMod(mod_name)
@@ -421,15 +419,7 @@ class SimpleCopyLogic:
                 continue
 
             current_categories = list(mod.categories())
-            current_notes = mod.notes() or ""
             is_selected = mod_name in self._selected_mods
-            
-            # 调试：打印前几个模组的备注状态
-            if mod_name in self._selected_mods[:2] or (not is_selected and len(current_notes) > 0):
-                self._logger.info(f"DEBUG '{mod_name}': selected={is_selected}, notes='{current_notes[:80]}...'")
-
-            if mod_name in self._selected_mods[:3] or mod_name in [m for m in all_mods[:3]]:
-                self._logger.info(f"DEBUG: '{mod_name}' is_selected={is_selected}, categories={current_categories}")
 
             if is_selected:
                 if MCH_CATEGORY not in current_categories:
@@ -438,14 +428,6 @@ class SimpleCopyLogic:
                         self._logger.info(f"Added category '{MCH_CATEGORY}' to '{mod_name}'")
                     except Exception as e:
                         self._logger.error(f"Failed to add category to '{mod_name}': {e}")
-
-                if MCH_NOTE_TAG not in current_notes:
-                    if current_notes:
-                        new_notes = current_notes.rstrip() + "\n" + MCH_NOTE_TAG
-                    else:
-                        new_notes = MCH_NOTE_TAG
-                    self._set_mod_notes(mod, new_notes)
-                    self._logger.info(f"Added note tag to '{mod_name}'")
             else:
                 if MCH_CATEGORY in current_categories:
                     try:
@@ -454,53 +436,7 @@ class SimpleCopyLogic:
                     except Exception as e:
                         self._logger.error(f"Failed to remove category from '{mod_name}': {e}")
 
-                if MCH_NOTE_TAG in current_notes:
-                    user_notes = current_notes.replace("\n" + MCH_NOTE_TAG, "").replace(MCH_NOTE_TAG, "").strip()
-                    self._logger.info(f"Removing note tag from '{mod_name}':")
-                    self._logger.info(f"  Before: '{current_notes}'")
-                    self._logger.info(f"  After:  '{user_notes}'")
-                    self._set_mod_notes(mod, user_notes)
-
-        self._logger.info(f"Mod tags sync completed.")
-
-    def _set_mod_notes(self, mod: mobase.IModInterface, notes: str):
-        try:
-            mod_path = Path(mod.absolutePath())
-            meta_path = mod_path / "meta.ini"
-        except Exception as e:
-            self._logger.error(f"Failed to get mod path: {e}")
-            return
-            
-        if not meta_path.exists():
-            self._logger.warning(f"meta.ini not found at: {meta_path}")
-            return
-
-        try:
-            with open(str(meta_path), 'r', encoding='utf-8') as f:
-                content = f.read()
-
-            lines = content.split('\n')
-            new_lines = []
-            found_notes = False
-            for line in lines:
-                if line.startswith('notes='):
-                    found_notes = True
-                    if notes is not None and notes != '':
-                        new_lines.append(f'notes={notes}')
-                else:
-                    new_lines.append(line)
-
-            if not found_notes and notes:
-                new_lines.append(f'notes={notes}')
-
-            new_content = '\n'.join(new_lines)
-            with open(str(meta_path), 'w', encoding='utf-8') as f:
-                f.write(new_content)
-
-            self._logger.info(f"Successfully wrote notes for '{mod.name()}'")
-            self._organizer.modDataChanged(mod)
-        except Exception as e:
-            self._logger.error(f"Failed to write notes for '{mod.name()}' at '{meta_path}': {e}", exc_info=True)
+        self._logger.info(f"Mod categories sync completed.")
 
     def disable_selected_mods_in_mo2(self):
         if not self._selected_mods:
