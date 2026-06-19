@@ -31,6 +31,7 @@ class ModCopyHelperPlugin(mobase.IPluginTool, mobase.IPluginFileMapper):
         init_translations(self._organizer)
 
         self._logic = SimpleCopyLogic(self._organizer)
+        self._logic.set_game_running_status(False)
 
         if self._organizer.profilePath():
             self._logic._ensure_paths_initialized()
@@ -204,6 +205,11 @@ class ModCopyHelperPlugin(mobase.IPluginTool, mobase.IPluginFileMapper):
         self._logic.remove_files_from_game_directory()
         self._logic.set_game_running_status(False) 
         self._logger.info("Game finished. Copied files (if any) removed.")
+
+    def _force_reset_game_status(self):
+        if self._logic and self._logic._is_game_running:
+            self._logger.warning("Force resetting game running status to False.")
+            self._logic.set_game_running_status(False)
 
     def _on_profile_changed(self, old_profile: mobase.IProfile, new_profile: mobase.IProfile): 
         old_profile_name = old_profile.name() if old_profile else "None"
