@@ -295,10 +295,6 @@ class SimpleCopySettingsDialog(QDialog):
             item.setForeground(COLUMN_STATUS, CONFLICT_COLOR)
             item.setFont(COLUMN_STATUS, self._bold_font())
             item.setForeground(COLUMN_NAME, CONFLICT_COLOR)
-            item.setBackground(COLUMN_CHECK, SELECTED_BG_COLOR)
-            item.setBackground(COLUMN_NAME, SELECTED_BG_COLOR)
-            item.setBackground(COLUMN_PRIORITY, SELECTED_BG_COLOR)
-            item.setBackground(COLUMN_STATUS, SELECTED_BG_COLOR)
             item.setToolTip(COLUMN_NAME, f"{mod_name}\n⚠ This mod is enabled in MO2 AND selected in plugin!\nIt will be disabled in MO2 on Apply.")
             item.setToolTip(COLUMN_STATUS, "警告：此模组同时在MO2中启用！\n请取消勾选或在MO2中禁用此模组。\nApply后将自动在MO2中禁用。")
         else:
@@ -309,18 +305,10 @@ class SimpleCopySettingsDialog(QDialog):
                 item.setText(COLUMN_STATUS, "✔")
                 item.setForeground(COLUMN_STATUS, QColor(50, 180, 50))
                 item.setToolTip(COLUMN_STATUS, "此模组已选中，将在启动时复制到游戏目录")
-                item.setBackground(COLUMN_CHECK, SELECTED_BG_COLOR)
-                item.setBackground(COLUMN_NAME, SELECTED_BG_COLOR)
-                item.setBackground(COLUMN_PRIORITY, SELECTED_BG_COLOR)
-                item.setBackground(COLUMN_STATUS, SELECTED_BG_COLOR)
             else:
                 item.setText(COLUMN_STATUS, "")
                 item.setForeground(COLUMN_STATUS, TRANSPARENT_COLOR)
                 item.setToolTip(COLUMN_STATUS, "")
-                item.setBackground(COLUMN_CHECK, TRANSPARENT_COLOR)
-                item.setBackground(COLUMN_NAME, TRANSPARENT_COLOR)
-                item.setBackground(COLUMN_PRIORITY, TRANSPARENT_COLOR)
-                item.setBackground(COLUMN_STATUS, TRANSPARENT_COLOR)
             
             if is_mod_active:
                 item.setForeground(COLUMN_NAME, QColor(Qt.GlobalColor.black))
@@ -376,12 +364,10 @@ class SimpleCopySettingsDialog(QDialog):
             self._highlighted_items.add(id(item))
         else:
             item.setData(COLUMN_CHECK, HIGHLIGHT_ROLE, False)
-            is_checked = item.checkState(COLUMN_CHECK) == Qt.CheckState.Checked
-            bg = SELECTED_BG_COLOR if is_checked else TRANSPARENT_COLOR
-            item.setBackground(COLUMN_CHECK, bg)
-            item.setBackground(COLUMN_NAME, bg)
-            item.setBackground(COLUMN_PRIORITY, bg)
-            item.setBackground(COLUMN_STATUS, bg)
+            item.setBackground(COLUMN_CHECK, TRANSPARENT_COLOR)
+            item.setBackground(COLUMN_NAME, TRANSPARENT_COLOR)
+            item.setBackground(COLUMN_PRIORITY, TRANSPARENT_COLOR)
+            item.setBackground(COLUMN_STATUS, TRANSPARENT_COLOR)
             self._highlighted_items.discard(id(item))
 
     def _toggle_highlight(self, item):
