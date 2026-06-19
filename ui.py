@@ -344,12 +344,19 @@ class SimpleCopySettingsDialog(QDialog):
                         modifiers = event.modifiers()
                         if modifiers & Qt.KeyboardModifier.ShiftModifier and self._last_clicked_item:
                             self._shift_select_range(item)
+                        elif modifiers & Qt.KeyboardModifier.ControlModifier:
+                            current_state = item.checkState(COLUMN_CHECK)
+                            new_state = Qt.CheckState.Unchecked if current_state == Qt.CheckState.Checked else Qt.CheckState.Checked
+                            item.setCheckState(COLUMN_CHECK, new_state)
+                            self._update_item_conflict_status(item)
                         else:
+                            self._deselect_all_except(item)
                             current_state = item.checkState(COLUMN_CHECK)
                             new_state = Qt.CheckState.Unchecked if current_state == Qt.CheckState.Checked else Qt.CheckState.Checked
                             item.setCheckState(COLUMN_CHECK, new_state)
                             self._update_item_conflict_status(item)
                         self._last_clicked_item = item
+                        self._update_apply_button_state()
                         return True
         return super().eventFilter(obj, event)
 
@@ -388,6 +395,14 @@ class SimpleCopySettingsDialog(QDialog):
         item.setCheckState(COLUMN_CHECK, state)
         self._update_item_conflict_status(item)
         self._update_apply_button_state()
+
+    def _deselect_all_except(self, except_item):
+        for i in range(self._mod_tree_widget.topLevelItemCount()):
+            item = self._mod_tree_widget.topLevelItem(i)
+            if item and item != except_item and not item.data(COLUMN_CHECK, IS_SEPARATOR_ROLE):
+                if item.checkState(COLUMN_CHECK) == Qt.CheckState.Checked:
+                    item.setCheckState(COLUMN_CHECK, Qt.CheckState.Unchecked)
+                    self._update_item_conflict_status(item)
 
     def _shift_select_range(self, end_item):
         if not self._last_clicked_item:
