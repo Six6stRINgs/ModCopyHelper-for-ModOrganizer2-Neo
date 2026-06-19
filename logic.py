@@ -464,14 +464,19 @@ class SimpleCopyLogic:
         self._logger.info(f"Mod tags sync completed.")
 
     def _set_mod_notes(self, mod: mobase.IModInterface, notes: str):
-        mod_path = Path(mod.absolutePath())
-        meta_path = mod_path / "meta.ini"
+        try:
+            mod_path = Path(mod.absolutePath())
+            meta_path = mod_path / "meta.ini"
+        except Exception as e:
+            self._logger.error(f"Failed to get mod path: {e}")
+            return
+            
         if not meta_path.exists():
-            self._logger.warning(f"meta.ini not found for '{mod.name()}'")
+            self._logger.warning(f"meta.ini not found at: {meta_path}")
             return
 
         try:
-            with open(meta_path, 'r', encoding='utf-8') as f:
+            with open(str(meta_path), 'r', encoding='utf-8') as f:
                 content = f.read()
 
             lines = content.split('\n')
@@ -480,26 +485,22 @@ class SimpleCopyLogic:
             for line in lines:
                 if line.startswith('notes='):
                     found_notes = True
-                    if notes:
+                    if notes is not None and notes != '':
                         new_lines.append(f'notes={notes}')
-                        self._logger.debug(f"  Writing notes: '{notes[:50]}...'")
-                    else:
-                        self._logger.debug(f"  Removing empty notes line")
                 else:
                     new_lines.append(line)
 
             if not found_notes and notes:
                 new_lines.append(f'notes={notes}')
-                self._logger.debug(f"  Adding new notes line")
 
             new_content = '\n'.join(new_lines)
-            with open(meta_path, 'w', encoding='utf-8') as f:
+            with open(str(meta_path), 'w', encoding='utf-8') as f:
                 f.write(new_content)
 
-            self._logger.info(f"Updated notes for '{mod.name()}' in {meta_path}")
+            self._logger.info(f"Successfully wrote notes for '{mod.name()}'")
             self._organizer.modDataChanged(mod)
         except Exception as e:
-            self._logger.error(f"Failed to set notes for '{mod.name()}': {e}", exc_info=True)
+            self._logger.error(f"Failed to write notes for '{mod.name()}' at '{meta_path}': {e}", exc_info=True)
 
     def disable_selected_mods_in_mo2(self):
         if not self._selected_mods:
