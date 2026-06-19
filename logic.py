@@ -470,3 +470,25 @@ class SimpleCopyLogic:
             self._organizer.modDataChanged(mod)
         except Exception as e:
             self._logger.error(f"Failed to set notes for '{mod.name()}': {e}", exc_info=True)
+
+    def disable_selected_mods_in_mo2(self):
+        if not self._selected_mods:
+            return
+
+        modlist = self._organizer.modList()
+        disabled_count = 0
+
+        for mod_name in self._selected_mods:
+            try:
+                mod = modlist.getMod(mod_name)
+                if mod and not mod.isSeparator():
+                    is_active = bool(modlist.state(mod_name) & mobase.ModState.ACTIVE)
+                    if is_active:
+                        modlist.setActive(mod_name, False)
+                        disabled_count += 1
+                        self._logger.info(f"Disabled mod '{mod_name}' in MO2")
+            except Exception as e:
+                self._logger.error(f"Failed to disable mod '{mod_name}': {e}", exc_info=True)
+
+        if disabled_count > 0:
+            self._logger.info(f"Auto-disabled {disabled_count} selected mods in MO2.")

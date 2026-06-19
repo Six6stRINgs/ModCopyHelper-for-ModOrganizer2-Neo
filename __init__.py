@@ -67,7 +67,8 @@ class ModCopyHelperPlugin(mobase.IPluginTool, mobase.IPluginFileMapper):
     def settings(self) -> list[mobase.PluginSetting]:
         return [
             mobase.PluginSetting("enabled", f"Enable {self.name()}", True), 
-            mobase.PluginSetting("logLevel", "Logging Level (DEBUG, INFO, WARNING, ERROR)", "INFO")
+            mobase.PluginSetting("logLevel", "Logging Level (DEBUG, INFO, WARNING, ERROR)", "INFO"),
+            mobase.PluginSetting("autoDisable", "Auto-disable selected mods in MO2", True)
         ]
 
     def displayName(self) -> str:
@@ -94,6 +95,11 @@ class ModCopyHelperPlugin(mobase.IPluginTool, mobase.IPluginFileMapper):
             newly_selected_mods = self._settings_dialog.get_selected_mods()
             self._logic.set_selected_mods(newly_selected_mods)
             self._logic.sync_mod_tags()
+            
+            auto_disable = self._organizer.pluginSetting(PLUGIN_NAME_CONST, "autoDisable")
+            if auto_disable:
+                self._logic.disable_selected_mods_in_mo2()
+            
             self._logger.info(f"Settings applied via dialog. New selection: {newly_selected_mods}")
         else:
             self._logger.info("Settings dialog cancelled.")

@@ -139,8 +139,16 @@ class SimpleCopySettingsDialog(QDialog):
         self._apply_button.clicked.connect(self._apply_changes)
         self._apply_button.setEnabled(False) 
 
+        auto_disable = self._organizer.pluginSetting("ModCopyHelper", "autoDisable")
+        
         main_layout = QVBoxLayout(self)
         main_layout.addWidget(QLabel("Select mods to copy to game directory on launch:"))
+        
+        if auto_disable:
+            warning_label = QLabel("⚠ Selected mods will be automatically disabled in MO2 after Apply.")
+            warning_label.setStyleSheet("color: orange; font-weight: bold;")
+            main_layout.addWidget(warning_label)
+        
         main_layout.addWidget(self._filter_input)
         main_layout.addWidget(self._mod_tree_widget)
         
