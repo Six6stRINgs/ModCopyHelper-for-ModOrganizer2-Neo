@@ -108,7 +108,7 @@ class ModTreeWidgetItem(QTreeWidgetItem):
 HIGHLIGHT_ROLE = Qt.ItemDataRole.UserRole + 5
 
 class SimpleCopySettingsDialog(QDialog): 
-    def __init__(self, organizer: mobase.IOrganizer, current_selected_mods: list[str], parent=None):
+    def __init__(self, organizer: mobase.IOrganizer, current_selected_mods: list[str], on_apply=None, parent=None):
         super().__init__(parent)
         self._organizer = organizer
         self._logger = get_logger()
@@ -117,6 +117,7 @@ class SimpleCopySettingsDialog(QDialog):
         self._updating_checks = False
         self._last_clicked_item = None
         self._highlighted_items = set()
+        self._on_apply = on_apply
 
         self.setWindowTitle(f"{self._logger.name} - {tr('dialog_title')}") 
         self.setMinimumSize(600, 500)
@@ -494,6 +495,8 @@ class SimpleCopySettingsDialog(QDialog):
         self._initial_selected_mods = self._current_selected_mods_on_dialog 
         self._apply_button.setEnabled(False) 
         self._logger.info(f"UI Apply: Selection changed to {self._current_selected_mods_on_dialog}")
+        if self._on_apply:
+            self._on_apply(list(self._current_selected_mods_on_dialog))
 
     def accept(self):
         self._apply_changes() 

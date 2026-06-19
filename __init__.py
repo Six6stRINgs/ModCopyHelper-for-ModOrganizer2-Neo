@@ -85,6 +85,16 @@ class ModCopyHelperPlugin(mobase.IPluginTool, mobase.IPluginFileMapper):
     def icon(self) -> QtGui.QIcon:
         return QtGui.QIcon() 
 
+    def _on_dialog_apply(self, selected_mods: list[str]):
+        self._logic.set_selected_mods(selected_mods)
+        self._logic.sync_mod_tags()
+        
+        auto_disable = self._organizer.pluginSetting(PLUGIN_NAME_CONST, "autoDisable")
+        if auto_disable:
+            self._logic.disable_selected_mods_in_mo2()
+        
+        self._logger.info(f"Dialog Apply: synced {len(selected_mods)} mods")
+
     def display(self):
         if not self._organizer.profilePath():
             QMessageBox.warning(None, tr("profile_not_loaded_title"), 
@@ -94,7 +104,9 @@ class ModCopyHelperPlugin(mobase.IPluginTool, mobase.IPluginFileMapper):
         self._logic.load_settings() 
         current_selection = self._logic.get_selected_mods()
         
-        self._settings_dialog = SimpleCopySettingsDialog(self._organizer, current_selection)
+        self._settings_dialog = SimpleCopySettingsDialog(
+            self._organizer, current_selection, on_apply=self._on_dialog_apply
+        )
         
         if self._settings_dialog.exec(): 
             newly_selected_mods = self._settings_dialog.get_selected_mods()
