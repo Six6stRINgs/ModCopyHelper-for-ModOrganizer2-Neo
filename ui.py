@@ -13,10 +13,14 @@ from .logger import get_logger
 COLUMN_CHECK = 0
 COLUMN_NAME = 1
 COLUMN_PRIORITY = 2
+COLUMN_STATUS = 3
 
 IS_SEPARATOR_ROLE = Qt.ItemDataRole.UserRole + 1
 MOD_NAME_ROLE = Qt.ItemDataRole.UserRole + 2
 PRIORITY_SORT_ROLE = Qt.ItemDataRole.UserRole + 3
+CONFLICT_ROLE = Qt.ItemDataRole.UserRole + 4
+
+CONFLICT_COLOR = QColor(220, 50, 50)
 
 DEFAULT_SEPARATOR_COLOR = QColor(100, 149, 237)
 
@@ -111,7 +115,7 @@ class SimpleCopySettingsDialog(QDialog):
         self.setMinimumSize(500, 400)
 
         self._mod_tree_widget = QTreeWidget()
-        self._mod_tree_widget.setHeaderLabels(["", "Mod Name", "Priority"])
+        self._mod_tree_widget.setHeaderLabels(["", "Mod Name", "Priority", "Status"])
         self._mod_tree_widget.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
         self._mod_tree_widget.setRootIsDecorated(False)
         self._mod_tree_widget.setAlternatingRowColors(True)
@@ -122,6 +126,7 @@ class SimpleCopySettingsDialog(QDialog):
         self._mod_tree_widget.header().setSectionResizeMode(COLUMN_CHECK, QHeaderView.ResizeMode.Fixed)
         self._mod_tree_widget.header().setSectionResizeMode(COLUMN_NAME, QHeaderView.ResizeMode.Stretch)
         self._mod_tree_widget.header().setSectionResizeMode(COLUMN_PRIORITY, QHeaderView.ResizeMode.ResizeToContents)
+        self._mod_tree_widget.header().setSectionResizeMode(COLUMN_STATUS, QHeaderView.ResizeMode.ResizeToContents)
         self._mod_tree_widget.header().resizeSection(COLUMN_CHECK, 30)
         self._mod_tree_widget.itemChanged.connect(self._on_item_changed)
         
@@ -202,17 +207,34 @@ class SimpleCopySettingsDialog(QDialog):
                 item.setData(COLUMN_CHECK, IS_SEPARATOR_ROLE, False)
                 item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
                 is_mod_active = bool(all_mods_manager.state(mod_name) & mobase.ModState.ACTIVE)
-                if not is_mod_active:
-                    item.setForeground(COLUMN_NAME, Qt.GlobalColor.gray)
-                    item.setForeground(COLUMN_PRIORITY, Qt.GlobalColor.gray)
-                    item.setToolTip(COLUMN_NAME, f"{mod_name} (Disabled in MO2)")
-                else:
-                    item.setToolTip(COLUMN_NAME, f"{mod_name} (Enabled in MO2)")
                 
-                if mod_name in self._current_selected_mods_on_dialog:
-                    item.setCheckState(COLUMN_CHECK, Qt.CheckState.Checked)
+                is_selected = mod_name in self._current_selected_mods_on_dialog
+                has_conflict = is_selected and is_mod_active
+                
+                if has_conflict:
+                    item.setData(COLUMN_CHECK, CONFLICT_ROLE, True)
+                    item.setText(COLUMN_STATUS, "⚠ Conflict")
+                    item.setForeground(COLUMN_STATUS, CONFLICT_COLOR)
+                    item.setFont(COLUMN_STATUS, self._bold_font())
+                    item.setForeground(COLUMN_NAME, CONFLICT_COLOR)
+                    item.setToolTip(COLUMN_NAME, f"{mod_name}\n⚠ This mod is enabled in MO2 AND selected in plugin!\nIt will be disabled in MO2 on Apply.")
+                    if is_selected:
+                        item.setCheckState(COLUMN_CHECK, Qt.CheckState.Checked)
+                    else:
+                        item.setCheckState(COLUMN_CHECK, Qt.CheckState.Unchecked)
                 else:
-                    item.setCheckState(COLUMN_CHECK, Qt.CheckState.Unchecked)
+                    item.setData(COLUMN_CHECK, CONFLICT_ROLE, False)
+                    if not is_mod_active:
+                        item.setForeground(COLUMN_NAME, Qt.GlobalColor.gray)
+                        item.setForeground(COLUMN_PRIORITY, Qt.GlobalColor.gray)
+                        item.setToolTip(COLUMN_NAME, f"{mod_name} (Disabled in MO2)")
+                    else:
+                        item.setToolTip(COLUMN_NAME, f"{mod_name} (Enabled in MO2)")
+                    
+                    if is_selected:
+                        item.setCheckState(COLUMN_CHECK, Qt.CheckState.Checked)
+                    else:
+                        item.setCheckState(COLUMN_CHECK, Qt.CheckState.Unchecked)
 
             self._mod_tree_widget.addTopLevelItem(item)
         
@@ -220,11 +242,49 @@ class SimpleCopySettingsDialog(QDialog):
         self._mod_tree_widget.sortByColumn(COLUMN_PRIORITY, Qt.SortOrder.AscendingOrder)
         self._updating_checks = False
 
+    def _bold_font(self):
+        font = self.font()
+        font.setBold(True)
+        return font
+
     def _on_item_changed(self, item, column):
         if self._updating_checks:
             return
         if column == COLUMN_CHECK:
+            self._update_item_conflict_status(item)
             self._update_apply_button_state()
+
+    def _update_item_conflict_status(self, item):
+        if item.data(COLUMN_CHECK, IS_SEPARATOR_ROLE):
+            return
+        
+        mod_name = item.data(COLUMN_NAME, MOD_NAME_ROLE)
+        if not mod_name:
+            return
+        
+        is_selected = item.checkState(COLUMN_CHECK) == Qt.CheckState.Checked
+        modlist = self._organizer.modList()
+        is_mod_active = bool(modlist.state(mod_name) & mobase.ModState.ACTIVE)
+        has_conflict = is_selected and is_mod_active
+        
+        if has_conflict:
+            item.setData(COLUMN_CHECK, CONFLICT_ROLE, True)
+            item.setText(COLUMN_STATUS, "⚠ Conflict")
+            item.setForeground(COLUMN_STATUS, CONFLICT_COLOR)
+            item.setFont(COLUMN_STATUS, self._bold_font())
+            item.setForeground(COLUMN_NAME, CONFLICT_COLOR)
+            item.setToolTip(COLUMN_NAME, f"{mod_name}\n⚠ This mod is enabled in MO2 AND selected in plugin!\nIt will be disabled in MO2 on Apply.")
+        else:
+            item.setData(COLUMN_CHECK, CONFLICT_ROLE, False)
+            item.setText(COLUMN_STATUS, "")
+            item.setForeground(COLUMN_STATUS, Qt.GlobalColor.white)
+            item.setFont(COLUMN_STATUS, self.font())
+            if is_mod_active:
+                item.setForeground(COLUMN_NAME, Qt.GlobalColor.white)
+                item.setToolTip(COLUMN_NAME, f"{mod_name} (Enabled in MO2)")
+            else:
+                item.setForeground(COLUMN_NAME, Qt.GlobalColor.gray)
+                item.setToolTip(COLUMN_NAME, f"{mod_name} (Disabled in MO2)")
 
     def _filter_mods(self):
         self._populate_mod_list()
