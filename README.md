@@ -1,122 +1,120 @@
+# ⚠️ AI-Generated Code Notice
+
+> **本项目代码由 AI 模型 MiMo-V2.5-Pro 通过 OpenCode 生成。**
+> 
+> 所有代码修改均为 AI 自动完成，可能存在未知 bug，请谨慎使用并自行甄别。
+> 
+> 本修改基于个人操作习惯定制，不一定适用于所有用户。
+
+---
+
 # ModCopyHelper - Enhanced
 
-A ModOrganizer 2 plugin that copies selected mod files to the game directory on launch and removes them on exit. This is an enhanced version of the original plugin by **41Channel**.
+ModOrganizer 2 插件，在启动游戏时将选中的模组文件复制到游戏目录，退出游戏时自动删除。基于 **41Channel** 的原版插件增强而来。
 
-**Original mod**: [Nexus Mods - ModCopyHelper](https://www.nexusmods.com/monsterhunterwilds/mods/2430)
+**原版模组**: [Nexus Mods - ModCopyHelper](https://www.nexusmods.com/monsterhunterwilds/mods/2430)
 
-## Original Features
+## 原版功能
 
-The original plugin provides basic functionality:
-- Copy selected mod files to the game directory when launching the game
-- Remove copied files when the game exits
-- Redirect game output to MO2's overwrite folder
-- Simple mod selection interface
+- 启动游戏时复制选中的模组文件到游戏目录
+- 退出游戏时删除已复制的文件
+- 将游戏输出重定向到 MO2 的 overwrite 文件夹
+- 简单的模组选择界面
 
-## Enhanced Features
+## 增强功能
 
-Our version adds significant improvements to the user experience:
+### 🎨 UI 改进
 
-### 🎨 Improved UI
+| 功能 | 说明 |
+|------|------|
+| **表格视图** | 模组以表格形式显示：复选框、模组名、优先级、状态 |
+| **列排序** | 点击表头可升序/降序排序 |
+| **优先级显示** | 显示每个模组的 MO2 优先级 |
+| **间隔符样式** | 从 `meta.ini` 读取颜色，居中加粗显示 |
+| **行高亮** | 选中的行显示背景色高亮 |
 
-| Feature | Description |
-|---------|-------------|
-| **Table View** | Mods displayed in a table with columns: Checkbox, Mod Name, Priority, Status |
-| **Sortable Columns** | Click column headers to sort (ascending/descending) |
-| **Priority Display** | Shows MO2 mod priority for each mod |
-| **Separator Styling** | Separators display with custom colors from `meta.ini`, centered text, bold font |
-| **Row Highlighting** | Selected rows are highlighted with background color |
+### 🖱️ 选择增强
 
-### 🖱️ Enhanced Selection
+| 功能 | 说明 |
+|------|------|
+| **点击选择** | 点击模组名切换选中状态 |
+| **单选模式** | 单击只选中一个模组（类似文件管理器） |
+| **Ctrl+点击** | 按住 Ctrl 多选 |
+| **Shift+点击** | 范围选择 |
+| **右键菜单** | 选择、取消、全选、反选 |
 
-| Feature | Description |
-|---------|-------------|
-| **Click to Select** | Click mod name to toggle selection |
-| **Single Selection** | Click selects only one mod (like file manager) |
-| **Ctrl+Click** | Multi-select with Ctrl held |
-| **Shift+Click** | Range selection |
-| **Right-Click Menu** | Context menu with Select, Deselect, Select All, Invert options |
+### ⚠️ 冲突检测
 
-### ⚠️ Conflict Detection
+| 功能 | 说明 |
+|------|------|
+| **状态列** | 显示 ✔（已选）或 ⚠ 冲突 |
+| **冲突警告** | 模组同时在插件选中和 MO2 启用时红色高亮 |
+| **提示信息** | 鼠标悬停显示详细信息 |
 
-| Feature | Description |
-|---------|-------------|
-| **Status Column** | Shows ✔ for selected mods, ⚠ Conflict for issues |
-| **Conflict Warning** | Red highlight when mod is both selected in plugin AND enabled in MO2 |
-| **Tooltips** | Hover for detailed information about conflicts |
+### ⚙️ 自动禁用
 
-### ⚙️ Auto-Disable
+| 功能 | 说明 |
+|------|------|
+| **自动禁用设置** | 可选是否自动在 MO2 中禁用选中的模组 |
+| **确认后生效** | 点击 OK/Apply 后自动禁用 |
 
-| Feature | Description |
-|---------|-------------|
-| **Auto-Disable Setting** | Option to automatically disable selected mods in MO2 |
-| **Apply on OK/Apply** | Selected mods are disabled in MO2 when you confirm |
+### 🏷️ 类别同步
 
-### 🏷️ Category Sync
+| 功能 | 说明 |
+|------|------|
+| **自动分类** | 选中的模组自动添加 "ModCopyHelper" 类别 |
+| **同步时机** | 点击 OK/Apply 时同步 |
+| **取消时移除** | 取消选中时自动移除类别 |
 
-| Feature | Description |
-|---------|-------------|
-| **Auto Category** | Selected mods automatically get "ModCopyHelper" category in MO2 |
-| **Sync on Apply** | Categories are synced when you click OK or Apply |
-| **Clean Removal** | Category is removed when mod is deselected |
+## 安装
 
-### 🌐 Internationalization
+1. 下载插件文件夹
+2. 将 `ModCopyHelper` 文件夹放入 MO2 的 `plugins` 目录
+3. 重启 MO2
+4. 在 MO2 设置中启用插件
 
-| Feature | Description |
-|---------|-------------|
-| **Multi-Language** | Supports English and Simplified Chinese |
-| **Auto-Detect** | Automatically detects language from MO2 settings |
-| **Manual Override** | Can set language manually in plugin settings |
+## 使用方法
 
-## Installation
+1. 点击 MO2 工具栏的 ModCopyHelper 图标
+2. 选择要复制到游戏目录的模组
+3. 点击 OK 或 Apply
+4. 启动游戏 - 选中的模组会自动复制
+5. 退出游戏时，复制的文件会被删除
 
-1. Download the plugin folder
-2. Place the `ModCopyHelper` folder in your MO2 `plugins` directory
-3. Restart MO2
-4. Enable the plugin in MO2 settings
+## 插件设置
 
-## Usage
+| 设置 | 说明 |
+|------|------|
+| **Enabled** | 启用/禁用插件 |
+| **Log Level** | 日志级别 (DEBUG, INFO, WARNING, ERROR) |
+| **Auto-Disable** | 自动在 MO2 中禁用选中的模组 |
+| **Language** | 语言设置 (auto, en, zh_CN) |
 
-1. Click the ModCopyHelper icon in MO2's toolbar
-2. Select mods you want to copy to the game directory
-3. Click OK or Apply
-4. Launch your game - selected mods will be copied automatically
-5. When you exit the game, copied files will be removed
-
-## Plugin Settings
-
-| Setting | Description |
-|---------|-------------|
-| **Enabled** | Enable/disable the plugin |
-| **Log Level** | Logging verbosity (DEBUG, INFO, WARNING, ERROR) |
-| **Auto-Disable** | Automatically disable selected mods in MO2 |
-| **Language** | Language setting (auto, en, zh_CN) |
-
-## File Structure
+## 文件结构
 
 ```
 ModCopyHelper/
-├── __init__.py    # Plugin entry point
-├── logic.py       # Core logic (copy, remove, settings)
-├── ui.py          # PyQt6 settings dialog
-├── i18n.py        # Internationalization
-├── logger.py      # Logging setup
-└── README.md      # This file
+├── __init__.py    # 插件入口
+├── logic.py       # 核心逻辑（复制、删除、设置）
+├── ui.py          # PyQt6 设置对话框
+├── i18n.py        # 国际化支持
+├── logger.py      # 日志配置
+└── README.md      # 本文件
 ```
 
-## Requirements
+## 依赖
 
 - ModOrganizer 2
-- Python 3.12+ (bundled with MO2)
-- PyQt6 (bundled with MO2)
+- Python 3.12+（MO2 自带）
+- PyQt6（MO2 自带）
 
-## Credits
+## 致谢
 
-- **Original Author**: 41Channel
-- **Enhancements**: AI-assisted development (OpenCode / Claude)
-  - UI improvements, selection system, conflict detection
-  - Category sync, auto-disable, internationalization
-  - All code modifications were generated by AI
+- **原版作者**: 41Channel
+- **AI 开发**: MiMo-V2.5-Pro via OpenCode
+  - 所有代码修改由 AI 完成
+  - 基于个人操作习惯定制
 
-## License
+## 许可证
 
-This is an enhancement of the original ModCopyHelper plugin. Please refer to the original mod's license terms.
+本项目基于原版 ModCopyHelper 插件增强，请遵循原版模组的许可条款。
