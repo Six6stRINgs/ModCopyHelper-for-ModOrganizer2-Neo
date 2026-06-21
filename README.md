@@ -1,0 +1,119 @@
+# ModCopyHelper - Enhanced
+
+A ModOrganizer 2 plugin that copies selected mod files to the game directory on launch and removes them on exit. This is an enhanced version of the original plugin by **41Channel**.
+
+**Original mod**: [Nexus Mods - ModCopyHelper](https://www.nexusmods.com/monsterhunterwilds/mods/2430)
+
+## Original Features
+
+The original plugin provides basic functionality:
+- Copy selected mod files to the game directory when launching the game
+- Remove copied files when the game exits
+- Redirect game output to MO2's overwrite folder
+- Simple mod selection interface
+
+## Enhanced Features
+
+Our version adds significant improvements to the user experience:
+
+### 🎨 Improved UI
+
+| Feature | Description |
+|---------|-------------|
+| **Table View** | Mods displayed in a table with columns: Checkbox, Mod Name, Priority, Status |
+| **Sortable Columns** | Click column headers to sort (ascending/descending) |
+| **Priority Display** | Shows MO2 mod priority for each mod |
+| **Separator Styling** | Separators display with custom colors from `meta.ini`, centered text, bold font |
+| **Row Highlighting** | Selected rows are highlighted with background color |
+
+### 🖱️ Enhanced Selection
+
+| Feature | Description |
+|---------|-------------|
+| **Click to Select** | Click mod name to toggle selection |
+| **Single Selection** | Click selects only one mod (like file manager) |
+| **Ctrl+Click** | Multi-select with Ctrl held |
+| **Shift+Click** | Range selection |
+| **Right-Click Menu** | Context menu with Select, Deselect, Select All, Invert options |
+
+### ⚠️ Conflict Detection
+
+| Feature | Description |
+|---------|-------------|
+| **Status Column** | Shows ✔ for selected mods, ⚠ Conflict for issues |
+| **Conflict Warning** | Red highlight when mod is both selected in plugin AND enabled in MO2 |
+| **Tooltips** | Hover for detailed information about conflicts |
+
+### ⚙️ Auto-Disable
+
+| Feature | Description |
+|---------|-------------|
+| **Auto-Disable Setting** | Option to automatically disable selected mods in MO2 |
+| **Apply on OK/Apply** | Selected mods are disabled in MO2 when you confirm |
+
+### 🏷️ Category Sync
+
+| Feature | Description |
+|---------|-------------|
+| **Auto Category** | Selected mods automatically get "ModCopyHelper" category in MO2 |
+| **Sync on Apply** | Categories are synced when you click OK or Apply |
+| **Clean Removal** | Category is removed when mod is deselected |
+
+### 🌐 Internationalization
+
+| Feature | Description |
+|---------|-------------|
+| **Multi-Language** | Supports English and Simplified Chinese |
+| **Auto-Detect** | Automatically detects language from MO2 settings |
+| **Manual Override** | Can set language manually in plugin settings |
+
+## Installation
+
+1. Download the plugin folder
+2. Place the `ModCopyHelper` folder in your MO2 `plugins` directory
+3. Restart MO2
+4. Enable the plugin in MO2 settings
+
+## Usage
+
+1. Click the ModCopyHelper icon in MO2's toolbar
+2. Select mods you want to copy to the game directory
+3. Click OK or Apply
+4. Launch your game - selected mods will be copied automatically
+5. When you exit the game, copied files will be removed
+
+## Plugin Settings
+
+| Setting | Description |
+|---------|-------------|
+| **Enabled** | Enable/disable the plugin |
+| **Log Level** | Logging verbosity (DEBUG, INFO, WARNING, ERROR) |
+| **Auto-Disable** | Automatically disable selected mods in MO2 |
+| **Language** | Language setting (auto, en, zh_CN) |
+
+## File Structure
+
+```
+ModCopyHelper/
+├── __init__.py    # Plugin entry point
+├── logic.py       # Core logic (copy, remove, settings)
+├── ui.py          # PyQt6 settings dialog
+├── i18n.py        # Internationalization
+├── logger.py      # Logging setup
+└── README.md      # This file
+```
+
+## Requirements
+
+- ModOrganizer 2
+- Python 3.12+ (bundled with MO2)
+- PyQt6 (bundled with MO2)
+
+## Credits
+
+- **Original Author**: 41Channel
+- **Enhancements**: Improved UI, selection, conflict detection, category sync, i18n
+
+## License
+
+This is an enhancement of the original ModCopyHelper plugin. Please refer to the original mod's license terms.
