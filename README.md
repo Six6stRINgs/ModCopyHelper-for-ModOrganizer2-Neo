@@ -8,7 +8,7 @@
 
 ---
 
-# ModCopyHelper - Enhanced
+# ModCopyHelper Neo
 
 A ModOrganizer 2 plugin that copies selected mod files to the game directory on launch and removes them on exit. Enhanced version of the original plugin by **41Channel**.
 

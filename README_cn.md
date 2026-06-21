@@ -8,7 +8,7 @@
 
 ---
 
-# ModCopyHelper - 增强版
+# ModCopyHelper Neo
 
 ModOrganizer 2 插件，在启动游戏时将选中的模组文件复制到游戏目录，退出游戏时自动删除。基于 **41Channel** 的原版插件增强而来。
 
